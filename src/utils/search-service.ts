@@ -168,8 +168,13 @@ export async function webSearch(query: string, limit = 5): Promise<SearchResult[
 /** Fetch full article via Jina Reader; returns '' on failure. */
 export async function fetchJinaContent(url: string): Promise<string> {
   try {
+    const { JINA_REMOVE_SELECTORS } = await import('../extractors/web-extractor.js');
     const res = await fetchWithTimeout(`https://r.jina.ai/${url}`, 15_000, {
-      headers: { Accept: 'text/markdown, text/plain, */*', 'X-Return-Format': 'markdown' },
+      headers: {
+        Accept: 'text/markdown, text/plain, */*',
+        'X-Return-Format': 'markdown',
+        'X-Remove-Selector': JINA_REMOVE_SELECTORS,
+      },
     });
     if (!res.ok) return '';
     const md = await res.text();

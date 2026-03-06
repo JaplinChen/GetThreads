@@ -5,8 +5,38 @@
  */
 import type { ExtractedContent, Extractor } from './types.js';
 import { fetchWithTimeout } from '../utils/fetch-with-timeout.js';
+import {
+  cleanWebChrome,
+  deduplicateTitle,
+  stripFooterSections,
+  stripJsonBlocks,
+} from './web-cleaner.js';
 
 const JINA_PREFIX = 'https://r.jina.ai/';
+
+/**
+ * CSS selectors for noise elements to remove at the HTML level.
+ * Jina's X-Remove-Selector strips these BEFORE converting to markdown,
+ * so we get clean content from the source — not regex-cleaned afterwards.
+ */
+export const JINA_REMOVE_SELECTORS = [
+  // Structural noise
+  'nav', 'footer', 'header', 'aside',
+  '[role="navigation"]', '[role="complementary"]', '[role="banner"]',
+  // Ads & tracking
+  '.ad', '.ads', '.advertisement', '[data-ad]', '.taboola', '.outbrain',
+  '.sponsored', '.dfp-ad', '[id*="google_ads"]',
+  // Sidebars & widgets
+  '.sidebar', '.widget', '.related-posts', '.recommended',
+  // Social & sharing
+  '.social-share', '.share-buttons', '.share-bar',
+  // Subscription & newsletter
+  '.newsletter', '.subscribe', '.subscription', '.signup-form',
+  // Cookie & popup
+  '.cookie-banner', '.cookie-notice', '.popup', '.modal',
+  // Author bios (beyond inline bylines)
+  '.author-bio', '.author-card', '.author-profile',
+].join(', ');
 
 /** Jina Reader error signals — these indicate the target URL was inaccessible */
 const JINA_ERROR_SIGNALS = [
@@ -61,69 +91,6 @@ function stripJinaHeader(markdown: string): string {
   return lines.slice(i).join('\n').trim();
 }
 
-/** Lines matching these are always removed (nav, footer, chrome) */
-const CHROME_LINE_RE = [
-  /登入[\/|]?註冊|登录[\/|]?注册|sign\s*in|sign\s*up/i,
-  /^(首[頁页]|home|搜[尋索]|search)\s*$/i,
-  /^(cookie|privacy|terms|disclaimer|copyright|©|advertisements?\s*$)/i,
-  /^(跳至主要內容|skip to (?:main )?content)/i,
-  /^={3,}\s*$/,   // separator "======="
-  /^-{5,}\s*$/,   // separator "------"
-  /^\*\s*$/,      // empty bullet "* "
-  /累計瀏覽|站內簡訊|追蹤$/,
-  /^\d+\s*$/,     // lone numbers (view counts, IDs)
-];
-
-/** URL patterns indicating ad/tracking links */
-const AD_URL_RE = /\/ads\/click|itadapi\.|doubleclick|googlesyndication|adservice|\/login\b/i;
-
-/** Remove site chrome: nav menus, ads, footers, author profiles, isolated link lists */
-function cleanWebChrome(text: string): string {
-  const lines = text.split('\n');
-  const result: string[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const trimmed = lines[i].trim();
-    if (!trimmed) { result.push(lines[i]); continue; }
-
-    // Skip lines matching chrome patterns
-    if (CHROME_LINE_RE.some(p => p.test(trimmed))) continue;
-
-    // Skip ad/tracking links
-    if (AD_URL_RE.test(trimmed)) continue;
-
-    // Skip clickable image banners: [![...](img)](link)
-    if (/^\[!\[.*?\]\(https?:\/\/[^)]+\)\]\(https?:\/\/[^)]+\)\s*$/.test(trimmed)) continue;
-
-    // Skip standalone small images (avatars, logos) — short img markdown
-    if (/^!\[Image \d+[:\]]/i.test(trimmed) && trimmed.length < 120) continue;
-
-    // Skip short link-only lines in blocks (nav/promo)
-    if (/^\[?.{1,35}\]?\(https?:\/\/[^)]+\)\s*$/.test(trimmed)) {
-      const prev = i > 0 ? lines[i - 1].trim() : '';
-      const next = i < lines.length - 1 ? lines[i + 1].trim() : '';
-      const isLink = (s: string) => /\]\(https?:\/\//.test(s) && s.length < 80;
-      if (isLink(prev) || isLink(next) || !prev) continue;
-    }
-
-    // Skip bullet nav items: "* [text](url)" or "*   [text](url)"
-    if (/^\*\s+\[.{1,20}\]\(https?:\/\/[^)]+\)\s*$/.test(trimmed)) {
-      const prev = i > 0 ? lines[i - 1].trim() : '';
-      const next = i < lines.length - 1 ? lines[i + 1].trim() : '';
-      if (/^\*\s+\[/.test(prev) || /^\*\s+\[/.test(next)) continue;
-    }
-
-    // Skip short non-content lines (nav text clusters like "問答 文章 Tag 邦友")
-    if (trimmed.length < 30 && /^[\p{L}\s]+$/u.test(trimmed) && trimmed.split(/\s+/).length >= 3) {
-      continue;
-    }
-
-    result.push(lines[i]);
-  }
-
-  return result.join('\n').replace(/\n{4,}/g, '\n\n\n');
-}
-
 export const webExtractor: Extractor = {
   platform: 'web',
 
@@ -146,6 +113,7 @@ export const webExtractor: Extractor = {
       headers: {
         Accept: 'text/markdown, text/plain, */*',
         'X-Return-Format': 'markdown',
+        'X-Remove-Selector': JINA_REMOVE_SELECTORS,
       },
     });
 
@@ -170,7 +138,11 @@ export const webExtractor: Extractor = {
       throw new Error(`Jina Reader 返回錯誤頁面：${title}`);
     }
 
-    const text = cleanWebChrome(removeBlobImages(stripJinaHeader(markdown)));
+    // Pipeline: footer → JSON → blob → header → chrome → dedup title
+    const cleaned = cleanWebChrome(
+      stripFooterSections(stripJsonBlocks(removeBlobImages(stripJinaHeader(markdown)))),
+    );
+    const text = deduplicateTitle(cleaned, title);
 
     // Extract domain as "author" stand-in
     let domain = url;

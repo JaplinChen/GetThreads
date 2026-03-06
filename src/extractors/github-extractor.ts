@@ -5,6 +5,7 @@
  */
 import type { ExtractedContent, Extractor } from './types.js';
 import { fetchWithTimeout } from '../utils/fetch-with-timeout.js';
+import { stripHtmlTags } from './web-cleaner.js';
 
 const GITHUB_PATTERN = /github\.com\/([\w.-]+)\/([\w.-]+)(?:\/(?:issues|pull)\/(\d+))?/i;
 
@@ -61,8 +62,9 @@ async function fetchReadme(owner: string, repo: string): Promise<string | null> 
     if (data.encoding !== 'base64') return null;
     // GitHub API includes newlines in the base64 string — strip before decoding
     const decoded = Buffer.from(data.content.replace(/\n/g, ''), 'base64').toString('utf-8');
-    // Truncate to 5000 chars to keep notes manageable
-    return decoded.length > 5000 ? decoded.slice(0, 5000) + '\n\n...(truncated)' : decoded;
+    // Strip HTML tags (badges, alignment wrappers) and truncate
+    const cleaned = stripHtmlTags(decoded);
+    return cleaned.length > 5000 ? cleaned.slice(0, 5000) + '\n\n...(truncated)' : cleaned;
   } catch {
     return null;
   }
