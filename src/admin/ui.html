@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GetThreads 設定</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, 'Microsoft JhengHei', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      width: 100%;
+      max-width: 540px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    h1 { font-size: 26px; color: #333; margin-bottom: 6px; }
+    .subtitle { color: #888; font-size: 14px; margin-bottom: 32px; }
+    .step { margin-bottom: 26px; }
+    .step-label { font-size: 12px; font-weight: 700; color: #667eea; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .step-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 12px; }
+    .input-row { display: flex; gap: 8px; }
+    input[type=text], input[type=password] {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px solid #e8e8e8;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+      min-width: 0;
+    }
+    input:focus { outline: none; border-color: #667eea; }
+    .btn {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 500;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .btn-ghost { background: #f4f4f4; color: #555; }
+    .btn-ghost:hover { background: #e8e8e8; }
+    .btn-primary {
+      background: #667eea;
+      color: white;
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .btn-primary:hover { background: #5a6fd6; }
+    .btn-primary:disabled { background: #bbb; cursor: not-allowed; }
+    .hint { font-size: 13px; color: #999; margin-top: 8px; line-height: 1.6; }
+    .hint a { color: #667eea; }
+    .status { font-size: 13px; margin-top: 8px; min-height: 18px; }
+    .ok { color: #27ae60; }
+    .err { color: #e74c3c; }
+    .vault-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+    .vault-item {
+      padding: 10px 14px;
+      background: #f8f8f8;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #444;
+      word-break: break-all;
+      transition: all 0.15s;
+    }
+    .vault-item:hover { border-color: #667eea; background: #f0f2ff; }
+    .vault-item.selected { border-color: #667eea; background: #f0f2ff; color: #555a9e; font-weight: 600; }
+    .divider { height: 1px; background: #f0f0f0; margin: 24px 0; }
+    .success-box {
+      display: none;
+      background: #edfbf0;
+      border: 2px solid #27ae60;
+      border-radius: 12px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .success-box h2 { color: #27ae60; font-size: 20px; margin-bottom: 8px; }
+    .success-box p { color: #555; font-size: 15px; line-height: 1.7; }
+    .tag {
+      display: inline-block;
+      background: #eee;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🤖 GetThreads 設定</h1>
+  <p class="subtitle">完成以下步驟，讓 Bot 開始幫你儲存內容到 Obsidian</p>
+
+  <div class="step">
+    <div class="step-label">步驟 1</div>
+    <div class="step-title">Telegram Bot Token</div>
+    <div class="input-row">
+      <input type="password" id="token" placeholder="貼上你的 Bot Token" />
+      <button class="btn btn-ghost" onclick="togglePass('token')" title="顯示/隱藏">👁</button>
+      <button class="btn btn-ghost" onclick="testToken()">測試連線</button>
+    </div>
+    <div class="status" id="tokenStatus"></div>
+    <p class="hint">
+      沒有 Token？<a href="https://t.me/botfather" target="_blank">點我前往 @BotFather 申請</a><br>
+      傳送 <span class="tag">/newbot</span> → 輸入 Bot 名稱 → 複製 Token 貼到這裡
+    </p>
+  </div>
+
+  <div class="step">
+    <div class="step-label">步驟 2</div>
+    <div class="step-title">Obsidian Vault 資料夾位置</div>
+    <div class="input-row">
+      <input type="text" id="vault" placeholder="例如：C:/Users/xxx/Documents/MyVault" />
+      <button class="btn btn-ghost" onclick="detectVaults()">自動偵測</button>
+    </div>
+    <div class="vault-list" id="vaultList"></div>
+    <p class="hint">按「自動偵測」找看看，或直接貼上 Vault 資料夾的完整路徑</p>
+  </div>
+
+  <div class="step">
+    <div class="step-label">步驟 3（可選）</div>
+    <div class="step-title">Claude API Key</div>
+    <div class="input-row">
+      <input type="password" id="apiKey" placeholder="sk-ant-... （不填也可以正常使用）" />
+      <button class="btn btn-ghost" onclick="togglePass('apiKey')" title="顯示/隱藏">👁</button>
+    </div>
+    <p class="hint">填入後可啟用 AI 自動摘要與關鍵字功能，可留空</p>
+  </div>
+
+  <div class="step">
+    <div class="step-label">步驟 4（建議）</div>
+    <div class="step-title">Bot 使用者白名單</div>
+    <div class="input-row">
+      <input type="text" id="allowedIds" placeholder="例如：123456789,987654321" />
+      <button class="btn btn-ghost" onclick="howToGetId()">如何取得？</button>
+    </div>
+    <div class="status" id="idsStatus"></div>
+    <p class="hint">
+      填入允許使用 Bot 的 Telegram 用戶 ID（逗號分隔）。<br>
+      不填則任何人皆可使用，<strong>建議填入以防止濫用</strong>。
+    </p>
+  </div>
+
+  <div class="divider"></div>
+  <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()">✅ 儲存設定</button>
+
+  <div class="success-box" id="successBox">
+    <h2>✅ 設定完成！</h2>
+    <p>
+      設定已儲存。<br><br>
+      請關閉此視窗，之後雙擊<br>
+      <strong>「啟動.bat」</strong> 即可讓 Bot 開始運作。
+    </p>
+  </div>
+</div>
+
+<script>
+function togglePass(id) {
+  const el = document.getElementById(id);
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function testToken() {
+  const token = document.getElementById('token').value.trim();
+  const status = document.getElementById('tokenStatus');
+  if (!token) { setStatus('tokenStatus', '請先輸入 Token', false); return; }
+  setStatus('tokenStatus', '測試中...', null);
+  const res = await fetch('/api/test-token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    setStatus('tokenStatus', `✓ 連線成功：@${data.username}`, true);
+  } else {
+    setStatus('tokenStatus', `✗ ${data.error}`, false);
+  }
+}
+
+async function detectVaults() {
+  const list = document.getElementById('vaultList');
+  list.innerHTML = '<p style="color:#999;font-size:13px;padding:4px 0">偵測中...</p>';
+  const res = await fetch('/api/vaults');
+  const { vaults } = await res.json();
+  if (!vaults.length) {
+    list.innerHTML = '<p style="color:#bbb;font-size:13px;padding:4px 0">找不到 Obsidian Vault，請手動輸入路徑</p>';
+    return;
+  }
+  list.innerHTML = vaults.map(v =>
+    `<div class="vault-item" onclick="selectVault(this,'${v.replace(/'/g, "\\'")}')">${v}</div>`
+  ).join('');
+}
+
+function selectVault(el, path) {
+  document.querySelectorAll('.vault-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('vault').value = path;
+}
+
+function setStatus(id, msg, ok) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'status' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+}
+
+function howToGetId() {
+  alert(
+    '如何取得 Telegram 用戶 ID：\n\n' +
+    '1. 啟動 Bot 後，傳送任何訊息給 Bot\n' +
+    '2. Bot 的 console 會顯示：[auth] Unauthorized message from user ID: 123456789\n' +
+    '3. 複製數字填入此欄位，重新儲存設定即可\n\n' +
+    '或直接搜尋 @userinfobot，傳送任意訊息，它會回覆你的 ID。'
+  );
+}
+
+function validateIds(raw) {
+  if (!raw) return { ok: true, cleaned: '' };
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  const invalid = parts.filter(p => !/^\d+$/.test(p));
+  if (invalid.length > 0) return { ok: false, error: `格式錯誤：${invalid.join(', ')}（只允許數字）` };
+  return { ok: true, cleaned: parts.join(',') };
+}
+
+async function saveConfig() {
+  const token = document.getElementById('token').value.trim();
+  const vault = document.getElementById('vault').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const rawIds = document.getElementById('allowedIds').value.trim();
+  if (!token) { alert('請填入 Telegram Bot Token'); return; }
+  if (!vault) { alert('請填入 Obsidian Vault 位置'); return; }
+  const { ok, cleaned, error } = validateIds(rawIds);
+  if (!ok) { setStatus('idsStatus', error, false); return; }
+  if (!cleaned) {
+    const proceed = confirm('未填入使用者白名單，任何人都可以使用你的 Bot。確定要繼續嗎？');
+    if (!proceed) return;
+  }
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.textContent = '儲存中...';
+  await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ BOT_TOKEN: token, VAULT_PATH: vault, ANTHROPIC_API_KEY: apiKey, ALLOWED_USER_IDS: cleaned }),
+  });
+  btn.style.display = 'none';
+  document.getElementById('successBox').style.display = 'block';
+}
+
+// 載入現有設定
+fetch('/api/config').then(r => r.json()).then(data => {
+  if (data.VAULT_PATH) document.getElementById('vault').value = data.VAULT_PATH;
+  if (data.BOT_TOKEN_set) setStatus('tokenStatus', '（已設定，輸入新 Token 可覆蓋）', null);
+  if (data.ALLOWED_USER_IDS) {
+    document.getElementById('allowedIds').value = data.ALLOWED_USER_IDS;
+    setStatus('idsStatus', `已設定 ${data.ALLOWED_USER_IDS.split(',').length} 個用戶`, true);
+  }
+});
+</script>
+</body>
+</html>

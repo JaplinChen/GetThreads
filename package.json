@@ -1,0 +1,25 @@
+{
+  "name": "getthreads",
+  "version": "1.0.0",
+  "description": "Telegram Bot to extract X.com/Threads content and save to Obsidian",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "camoufox-js": "^0.9.1",
+    "dotenv": "^17.3.1",
+    "playwright-core": "^1.58.2",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
