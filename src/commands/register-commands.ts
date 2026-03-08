@@ -9,7 +9,8 @@ import { executeReclassify } from '../learning/reclassify-command.js';
 import { executeBatchTranslate } from '../learning/batch-translator.js';
 import { handleTimeline } from './timeline-command.js';
 import { handleMonitor, handleSearch } from './monitor-command.js';
-import { handleAnalyze, handleKnowledge } from './knowledge-command.js';
+import { handleAnalyze, handleKnowledge, handleGaps, handleSkills } from './knowledge-command.js';
+import { handleRecommend, handleBrief, handleCompare } from './knowledge-query-command.js';
 import { camoufoxPool } from '../utils/camoufox-pool.js';
 
 /** Shared error formatter (also used by bot.ts message handler) */
@@ -42,6 +43,11 @@ export function registerCommands(
     '/timeline @用戶 — 抓取用戶最近貼文',
     '/analyze — 深度分析 Vault 知識',
     '/knowledge — 查看知識庫摘要',
+    '/recommend <主題> — 推薦相關筆記',
+    '/brief <主題> — 主題知識簡報',
+    '/compare <A> vs <B> — 實體對比',
+    '/gaps — 知識缺口分析',
+    '/skills — 高密度主題 Skill 建議',
     '/recent — 本次啟動已儲存的內容',
     '/status — Bot 運行狀態',
     '/learn — 重新掃描 Vault 更新分類',
@@ -127,6 +133,41 @@ export function registerCommands(
     });
   });
 
+  bot.command('recommend', (ctx) => {
+    handleRecommend(ctx, config).catch(err => {
+      console.error('[recommend]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
+  bot.command('brief', (ctx) => {
+    handleBrief(ctx, config).catch(err => {
+      console.error('[brief]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
+  bot.command('compare', (ctx) => {
+    handleCompare(ctx, config).catch(err => {
+      console.error('[compare]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
+  bot.command('gaps', (ctx) => {
+    handleGaps(ctx, config).catch(err => {
+      console.error('[gaps]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
+  bot.command('skills', (ctx) => {
+    handleSkills(ctx, config).catch(err => {
+      console.error('[skills]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
   // --- Info commands ---
   bot.command('status', async (ctx) => {
     const uptime = Math.floor((Date.now() - startTime) / 1000);
@@ -167,6 +208,11 @@ export function registerCommands(
     { command: 'timeline', description: '抓取用戶最近貼文' },
     { command: 'analyze', description: '深度分析 Vault 知識' },
     { command: 'knowledge', description: '查看知識庫摘要' },
+    { command: 'recommend', description: '推薦相關筆記' },
+    { command: 'brief', description: '主題知識簡報' },
+    { command: 'compare', description: '實體對比' },
+    { command: 'gaps', description: '知識缺口分析' },
+    { command: 'skills', description: '高密度主題 Skill 建議' },
     { command: 'recent', description: '本次已儲存的內容' },
     { command: 'status', description: 'Bot 運行狀態' },
     { command: 'learn', description: '重新掃描 Vault 更新分類' },

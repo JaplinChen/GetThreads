@@ -1,12 +1,16 @@
 /**
- * /analyze and /knowledge commands — deep vault knowledge extraction.
+ * /analyze, /knowledge, /gaps, /skills — knowledge system commands.
  * /analyze: guides user to Claude Code /vault-analyze skill.
  * /knowledge: reads pre-computed knowledge from vault-knowledge.json.
+ * /gaps: shows knowledge gaps detected in the vault.
+ * /skills: shows high-density topics that can become Claude Code commands.
  */
 import type { Context } from 'telegraf';
 import type { AppConfig } from '../utils/config.js';
 import { loadKnowledge } from '../knowledge/knowledge-store.js';
 import { aggregateKnowledge, formatKnowledgeSummary } from '../knowledge/knowledge-aggregator.js';
+import { detectKnowledgeGaps, formatGapsSummary } from '../knowledge/knowledge-graph.js';
+import { detectHighDensityTopics, formatTopicsSummary } from '../knowledge/skill-generator.js';
 
 /** /analyze — guide user to Claude Code skill */
 export async function handleAnalyze(ctx: Context, _config: AppConfig): Promise<void> {
@@ -47,4 +51,28 @@ export async function handleKnowledge(ctx: Context, _config: AppConfig): Promise
   }
   aggregateKnowledge(knowledge);
   await ctx.reply(formatKnowledgeSummary(knowledge));
+}
+
+/** /gaps — show knowledge gaps */
+export async function handleGaps(ctx: Context, _config: AppConfig): Promise<void> {
+  const knowledge = await loadKnowledge();
+  if (Object.keys(knowledge.notes).length === 0) {
+    await ctx.reply('知識庫為空，請先執行 /vault-analyze');
+    return;
+  }
+  aggregateKnowledge(knowledge);
+  const gaps = detectKnowledgeGaps(knowledge);
+  await ctx.reply(formatGapsSummary(gaps));
+}
+
+/** /skills — show high-density topics suitable for skill generation */
+export async function handleSkills(ctx: Context, _config: AppConfig): Promise<void> {
+  const knowledge = await loadKnowledge();
+  if (Object.keys(knowledge.notes).length === 0) {
+    await ctx.reply('知識庫為空，請先執行 /vault-analyze');
+    return;
+  }
+  aggregateKnowledge(knowledge);
+  const topics = detectHighDensityTopics(knowledge);
+  await ctx.reply(formatTopicsSummary(topics));
 }
