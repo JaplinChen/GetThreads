@@ -1,4 +1,5 @@
 import { loadConfig } from './utils/config.js';
+import { logger } from './core/logger.js';
 import { registerAllExtractors } from './extractors/index.js';
 import { createBot } from './bot.js';
 import { ProcessGuardian } from './process-guardian.js';
@@ -13,7 +14,7 @@ registerAllExtractors();
 const bot = createBot(config);
 
 bot.catch((err: unknown) => {
-  console.error('[Bot error]', err);
+  logger.error('bot', 'Bot error', err);
 });
 
 // Load existing rules and knowledge immediately (fast, from disk)
@@ -23,6 +24,6 @@ loadKnowledge().catch(() => {});
 // Re-scan vault in background to update rules (slow, but non-blocking)
 runVaultLearner(config.vaultPath, RULES_PATH)
   .then((patterns) => refreshFromPatterns(patterns))
-  .catch((e) => console.warn('[learn] 啟動學習失敗:', (e as Error).message));
+  .catch((e) => logger.warn('learn', '啟動學習失敗', { message: (e as Error).message }));
 
 new ProcessGuardian(bot).launch();

@@ -3,6 +3,7 @@
  * ffmpeg for keyframe screenshots, whisper.cpp as STT fallback.
  */
 import { execFile } from 'node:child_process';
+import { logger } from '../core/logger.js';
 import { promisify } from 'node:util';
 import { mkdir, readFile, rm, readdir } from 'node:fs/promises';
 import { join, extname } from 'node:path';
@@ -81,7 +82,7 @@ async function whisperTranscribe(videoPath: string, tmpDir: string): Promise<str
       '-y', '-i', videoPath, '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', audioPath,
     ], { timeout: 30_000 });
   } catch {
-    console.warn('[tiktok] ffmpeg audio extraction failed');
+    logger.warn('tiktok', 'ffmpeg audio extraction failed');
     return null;
   }
 
@@ -100,7 +101,7 @@ async function whisperTranscribe(videoPath: string, tmpDir: string): Promise<str
       continue;
     }
   }
-  console.warn('[tiktok] whisper.cpp not available, skipping STT');
+  logger.warn('tiktok', 'whisper.cpp not available; skipping STT');
   return null;
 }
 
@@ -202,7 +203,7 @@ export const tiktokExtractor: Extractor = {
           '-show_entries', 'stream=codec_name', '-of', 'csv=p=0', videoPath,
         ], { timeout: 10_000 });
         if (probeOut.trim() === 'hevc' || probeOut.trim() === 'h265') {
-          console.log('[tiktok] Transcoding H.265 → H.264...');
+          logger.info('tiktok', 'Transcoding H.265 -> H.264');
           await execFileAsync('ffmpeg', [
             '-y', '-i', videoPath,
             '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
@@ -213,7 +214,7 @@ export const tiktokExtractor: Extractor = {
           await rename(h264Path, videoPath);
         }
       } catch (err) {
-        console.warn('[tiktok] H.264 transcode failed, keeping original:', (err as Error).message);
+        logger.warn('tiktok', 'H.264 transcode failed; keeping original', { message: (err as Error).message });
         await rm(h264Path, { force: true }).catch(() => {});
       }
 

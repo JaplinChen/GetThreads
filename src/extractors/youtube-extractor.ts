@@ -4,6 +4,7 @@
  * Requires yt-dlp installed: https://github.com/yt-dlp/yt-dlp#installation
  */
 import { execFile } from 'node:child_process';
+import { logger } from '../core/logger.js';
 import { promisify } from 'node:util';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -172,7 +173,7 @@ async function extractVideo(url: string): Promise<ExtractedContent> {
     localPath = videoPath;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn('[youtube] Video download failed:', msg.slice(0, 200));
+    logger.warn('youtube', 'video download failed', { message: msg.slice(0, 200) });
     await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
   }
 
@@ -236,7 +237,7 @@ async function extractPlaylist(url: string): Promise<ExtractedContent> {
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.warn('[youtube] Playlist video download failed:', msg.slice(0, 200));
+    logger.warn('youtube', 'playlist video download failed', { message: msg.slice(0, 200) });
   }
 
   return {

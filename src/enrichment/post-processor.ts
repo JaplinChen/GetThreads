@@ -5,6 +5,7 @@
  */
 
 import type { ExtractedContent } from '../extractors/types.js';
+import { logger } from '../core/logger.js';
 import { extractUrlsFromText, enrichLinkedUrls, type UrlEntry } from './link-enricher.js';
 import { translateIfNeeded } from './translator.js';
 import { canonicalizeUrl } from '../utils/url-canonicalizer.js';
@@ -78,7 +79,7 @@ export async function postProcess(
   const result = await Promise.race([work, timer]);
 
   if (result === 'timeout') {
-    console.warn('[postProcess] 整體超時 (20s)，略過補充處理');
+    logger.warn('post-process', '整體超時 (20s)，略過補充處理');
     return;
   }
 
@@ -86,12 +87,12 @@ export async function postProcess(
 
   if (linkedResult.status === 'fulfilled' && linkedResult.value.length > 0) {
     content.linkedContent = linkedResult.value;
-    console.log(`[postProcess] 補充 ${linkedResult.value.length} 個連結`);
+    logger.info('post-process', '補充連結完成', { count: linkedResult.value.length });
   }
 
   if (translationResult.status === 'fulfilled' && translationResult.value) {
     content.translation = translationResult.value;
-    console.log(`[postProcess] 翻譯完成 (${translationResult.value.detectedLanguage})`);
+    logger.info('post-process', '翻譯完成', { language: translationResult.value.detectedLanguage });
   }
 }
 

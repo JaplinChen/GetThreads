@@ -3,6 +3,7 @@
  * with incremental update support via content hashing.
  */
 import { readFile, writeFile, readdir } from 'node:fs/promises';
+import { logger } from '../core/logger.js';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { canonicalizeUrl } from '../utils/url-canonicalizer.js';
@@ -35,7 +36,7 @@ export async function loadKnowledge(path = KNOWLEDGE_PATH): Promise<VaultKnowled
   try {
     const raw = await readFile(path, 'utf-8');
     cachedKnowledge = JSON.parse(raw) as VaultKnowledge;
-    console.log(`[knowledge] 載入 ${Object.keys(cachedKnowledge.notes).length} 篇分析`);
+    logger.info('knowledge', '載入知識快取', { notes: Object.keys(cachedKnowledge.notes).length });
     return cachedKnowledge;
   } catch {
     cachedKnowledge = createEmpty();

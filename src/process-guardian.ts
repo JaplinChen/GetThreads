@@ -1,4 +1,5 @@
 ﻿import { Telegraf } from 'telegraf';
+import { logger } from './core/logger.js';
 import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
 
 const PID_FILE = '.bot.pid';
@@ -37,7 +38,7 @@ export class ProcessGuardian {
     try {
       const pidText = readFileSync(PID_FILE, 'utf8').trim();
       if (!/^\d+$/.test(pidText)) {
-        console.warn('[Guardian] Invalid PID format in lockfile, clearing');
+        logger.warn('guardian', 'invalid PID format in lockfile; clearing');
         this.clearPid();
         return;
       }
@@ -46,12 +47,12 @@ export class ProcessGuardian {
       if (pid === process.pid) return;
 
       if (!this.isProcessAlive(pid)) {
-        console.log(`[Guardian] Removing stale lockfile PID=${pid}`);
+        logger.info('guardian', 'removing stale lockfile', { pid });
         this.clearPid();
         return;
       }
 
-      console.warn(`[Guardian] Existing process detected PID=${pid}; not force-killing`);
+      logger.warn('guardian', 'existing process detected; not force-killing', { pid });
     } catch {
       this.clearPid();
     }
@@ -71,15 +72,15 @@ export class ProcessGuardian {
       if (this.is409(err) && this.retries < MAX_RETRIES) {
         this.retries++;
         const delay = Math.min(BASE_DELAY_MS * 2 ** this.retries, 60_000);
-        console.error(`[Guardian] 409 Conflict - retry ${this.retries}/${MAX_RETRIES} in ${delay / 1000}s`);
+        logger.error('guardian', `409 conflict retry ${this.retries}/${MAX_RETRIES}`, { delaySeconds: delay / 1000 });
         await this.sleep(delay);
         this.attempt();
       } else if (this.retries >= MAX_RETRIES) {
-        console.error('[Guardian] Max retries exceeded. Run /stopbot then /startbot.');
+        logger.error('guardian', 'max retries exceeded; run /stopbot then /startbot');
         this.clearPid();
         process.exit(1);
       } else {
-        console.error('[Guardian] Fatal error:', err);
+        logger.error('guardian', 'fatal error', err);
         this.clearPid();
         process.exit(1);
       }
@@ -100,6 +101,6 @@ export class ProcessGuardian {
     });
 
     this.attempt();
-    console.log('[Guardian] Bot launching... (auto-retry on 409, max 5x)');
+    logger.info('guardian', 'bot launching (auto-retry on 409, max 5x)');
   }
 }
