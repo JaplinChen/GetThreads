@@ -1,10 +1,11 @@
-/**
+﻿/**
  * Persistent knowledge store — reads/writes vault-knowledge.json
  * with incremental update support via content hashing.
  */
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
+import { canonicalizeUrl } from '../utils/url-canonicalizer.js';
 import type {
   VaultKnowledge, NoteAnalysis, KnowledgeEntity,
   KnowledgeInsight, KnowledgeRelation, AIAnalysisResponse,
@@ -153,7 +154,7 @@ export async function scanVaultNotes(vaultPath: string): Promise<Array<{
           if (!urlMatch) continue;
 
           const url = urlMatch[1].trim();
-          const noteId = normaliseUrl(url);
+          const noteId = canonicalizeUrl(url);
           const title = (titleMatch?.[1] ?? '').replace(/^["']|["']$/g, '').trim();
           const category = (catMatch?.[1] ?? '其他').replace(/^["']|["']$/g, '').trim();
 
@@ -167,11 +168,4 @@ export async function scanVaultNotes(vaultPath: string): Promise<Array<{
   return results;
 }
 
-function normaliseUrl(raw: string): string {
-  try {
-    const u = new URL(raw);
-    return u.origin + u.pathname.replace(/\/+$/, '');
-  } catch {
-    return raw;
-  }
-}
+

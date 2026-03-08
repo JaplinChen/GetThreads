@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Post-processing pipeline: runs after extract + AI enrich, before save.
  * Enriches linked URLs and translates non-zh-TW content in parallel.
  * Entire pipeline has a 20s hard timeout; any failure is silently skipped.
@@ -7,6 +7,7 @@
 import type { ExtractedContent } from '../extractors/types.js';
 import { extractUrlsFromText, enrichLinkedUrls, type UrlEntry } from './link-enricher.js';
 import { translateIfNeeded } from './translator.js';
+import { canonicalizeUrl } from '../utils/url-canonicalizer.js';
 
 export interface PostProcessOptions {
   enrichPostLinks: boolean;
@@ -15,23 +16,14 @@ export interface PostProcessOptions {
   maxLinkedUrls: number;
 }
 
-function normaliseUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.origin + u.pathname.replace(/\/+$/, '');
-  } catch {
-    return url;
-  }
-}
-
 /** Collect URLs from post text and comments that are worth enriching */
 function collectUrls(content: ExtractedContent, opts: PostProcessOptions): UrlEntry[] {
   const entries: UrlEntry[] = [];
-  const selfUrl = normaliseUrl(content.url);
+  const selfUrl = canonicalizeUrl(content.url);
 
   if (opts.enrichPostLinks) {
     for (const url of extractUrlsFromText(content.text)) {
-      if (normaliseUrl(url) !== selfUrl) {
+      if (canonicalizeUrl(url) !== selfUrl) {
         entries.push({ url, source: 'post' });
       }
     }
@@ -53,7 +45,7 @@ function collectUrls(content: ExtractedContent, opts: PostProcessOptions): UrlEn
   // Deduplicate by normalised URL, keep first occurrence
   const seen = new Set<string>();
   return entries.filter(e => {
-    const norm = normaliseUrl(e.url);
+    const norm = canonicalizeUrl(e.url);
     if (seen.has(norm)) return false;
     seen.add(norm);
     return true;
@@ -102,3 +94,4 @@ export async function postProcess(
     console.log(`[postProcess] 翻譯完成 (${translationResult.value.detectedLanguage})`);
   }
 }
+

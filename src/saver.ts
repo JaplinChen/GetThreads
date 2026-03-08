@@ -1,9 +1,10 @@
-import { mkdir, writeFile, readdir, readFile, copyFile } from 'node:fs/promises';
+﻿import { mkdir, writeFile, readdir, readFile, copyFile } from 'node:fs/promises';
 import { join, extname, resolve, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { ExtractedContent, Platform } from './extractors/types.js';
 import { formatAsMarkdown } from './formatter.js';
 import { fetchWithTimeout } from './utils/fetch-with-timeout.js';
+import { canonicalizeUrl } from './utils/url-canonicalizer.js';
 
 // In-memory URL index: normalizedUrl → filePath (built on first use)
 let urlIndex: Map<string, string> | null = null;
@@ -91,16 +92,6 @@ export interface SaveResult {
   duplicate?: boolean;
 }
 
-/** Normalise a URL for dedup comparison: strip query string, keep only origin + pathname */
-function normaliseUrl(raw: string): string {
-  try {
-    const u = new URL(raw);
-    return u.origin + u.pathname.replace(/\/+$/, '');
-  } catch {
-    return raw;
-  }
-}
-
 /** Build URL index by scanning all .md files (runs once, then cached in memory). */
 async function buildUrlIndex(vaultPath: string): Promise<Map<string, string>> {
   const index = new Map<string, string>();
@@ -121,7 +112,7 @@ async function buildUrlIndex(vaultPath: string): Promise<Map<string, string>> {
           const raw = await readFile(fullPath, 'utf-8');
           const first25 = raw.split('\n').slice(0, 25).join('\n');
           const match = first25.match(/^url:\s*["']?(.*?)["']?\s*$/m);
-          if (match) index.set(normaliseUrl(match[1].trim()), fullPath);
+          if (match) index.set(canonicalizeUrl(match[1].trim()), fullPath);
         } catch { /* skip unreadable files */ }
       }
     }
@@ -134,7 +125,7 @@ async function buildUrlIndex(vaultPath: string): Promise<Map<string, string>> {
 /** Check for duplicate URL using in-memory cache (O(1) after first scan). */
 export async function isDuplicateUrl(url: string, vaultPath: string): Promise<string | null> {
   if (!urlIndex) urlIndex = await buildUrlIndex(vaultPath);
-  return urlIndex.get(normaliseUrl(url)) ?? null;
+  return urlIndex.get(canonicalizeUrl(url)) ?? null;
 }
 
 /** Save extracted content as Obsidian Markdown + images to the vault */
@@ -143,7 +134,7 @@ export async function saveToVault(
   vaultPath: string,
   opts?: { forceOverwrite?: boolean },
 ): Promise<SaveResult> {
-  const normUrl = normaliseUrl(content.url);
+  const normUrl = canonicalizeUrl(content.url);
 
   // Race condition guard (skip for forceOverwrite)
   if (!opts?.forceOverwrite) {
@@ -249,3 +240,5 @@ export async function saveToVault(
     processingUrls.delete(normUrl);
   }
 }
+
+
