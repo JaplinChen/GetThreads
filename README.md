@@ -143,7 +143,7 @@ npx camoufox-js fetch
 ---
 
 <details>
-<summary><strong>開發者資訊</strong></summary>
+<summary><strong>開發資訊</strong></summary>
 
 ### 開發指令
 
