@@ -4,6 +4,7 @@ import { postProcess } from '../../enrichment/post-processor.js';
 import type { ExtractedContent } from '../../extractors/types.js';
 import { enrichContent } from '../../learning/ai-enricher.js';
 import { getTopKeywordsForCategory } from '../../learning/dynamic-classifier.js';
+import { AI_TRANSCRIPT_PREFIX } from '../user-messages.js';
 import type { AppConfig } from '../../utils/config.js';
 
 export async function enrichExtractedContent(content: ExtractedContent, config: AppConfig): Promise<void> {
@@ -13,7 +14,7 @@ export async function enrichExtractedContent(content: ExtractedContent, config: 
   if (config.anthropicApiKey) {
     const hints = getTopKeywordsForCategory(content.category);
     const textForAI = content.transcript
-      ? `${content.text}\n\n??蝔選?${content.transcript.slice(0, 500)}`
+      ? `${content.text}${AI_TRANSCRIPT_PREFIX}${content.transcript.slice(0, 500)}`
       : content.text;
     const enriched = await enrichContent(content.title, textForAI, hints, config.anthropicApiKey);
     if (enriched.keywords) content.enrichedKeywords = enriched.keywords;
@@ -30,6 +31,6 @@ export async function enrichExtractedContent(content: ExtractedContent, config: 
       maxLinkedUrls: config.maxLinkedUrls,
     });
   } catch (err) {
-    logger.warn('post-process', '鋆???憭望?', { message: (err as Error).message });
+    logger.warn('post-process', 'post process failed', { message: (err as Error).message });
   }
 }

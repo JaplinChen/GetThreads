@@ -1,6 +1,7 @@
+﻿import { existsSync } from 'node:fs';
 import { config as dotenvConfig } from 'dotenv';
+
 dotenvConfig({ override: true });
-import { existsSync } from 'node:fs';
 
 export interface AppConfig {
   botToken: string;
@@ -27,7 +28,7 @@ export function loadConfig(): AppConfig {
   }
 
   if (!existsSync(vaultPath)) {
-    throw new Error('VAULT_PATH 不存在，請確認路徑是否正確');
+    throw new Error('VAULT_PATH points to a directory that does not exist');
   }
 
   const allowedRaw = process.env.ALLOWED_USER_IDS;
@@ -35,8 +36,8 @@ export function loadConfig(): AppConfig {
     ? new Set(
         allowedRaw
           .split(',')
-          .map(s => parseInt(s.trim(), 10))
-          .filter(n => !isNaN(n)),
+          .map((s) => parseInt(s.trim(), 10))
+          .filter((n) => !isNaN(n)),
       )
     : undefined;
 
