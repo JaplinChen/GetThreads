@@ -3,10 +3,12 @@
  * Pure queries on vault-knowledge.json, no API calls needed.
  */
 import type { Context } from 'telegraf';
+import { Markup } from 'telegraf';
 import type { AppConfig } from '../utils/config.js';
 import { loadKnowledge } from '../knowledge/knowledge-store.js';
 import { aggregateKnowledge, getTopEntities, getInsightsByTopic } from '../knowledge/knowledge-aggregator.js';
 import type { VaultKnowledge, NoteAnalysis, KnowledgeEntity } from '../knowledge/types.js';
+import { tagForceReply, forceReplyMarkup } from '../utils/force-reply.js';
 
 const TYPE_LABEL: Record<string, string> = {
   tool: '工具', concept: '概念', person: '人物', framework: '框架',
@@ -17,7 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 export async function handleRecommend(ctx: Context, _config: AppConfig): Promise<void> {
   const topic = extractArg(ctx);
   if (!topic) {
-    await ctx.reply('用法：/recommend <主題>\n例：/recommend Obsidian');
+    await replyWithTopicPicker(ctx, 'recommend', '請選擇主題或輸入關鍵字：');
     return;
   }
 
@@ -56,7 +58,7 @@ export async function handleRecommend(ctx: Context, _config: AppConfig): Promise
 export async function handleBrief(ctx: Context, _config: AppConfig): Promise<void> {
   const topic = extractArg(ctx);
   if (!topic) {
-    await ctx.reply('用法：/brief <主題>\n例：/brief Agent 工程');
+    await replyWithTopicPicker(ctx, 'brief', '請選擇主題或輸入關鍵字：');
     return;
   }
 
@@ -99,7 +101,7 @@ export async function handleBrief(ctx: Context, _config: AppConfig): Promise<voi
 export async function handleCompare(ctx: Context, _config: AppConfig): Promise<void> {
   const arg = extractArg(ctx);
   if (!arg || !arg.includes('vs')) {
-    await ctx.reply('用法：/compare <A> vs <B>\n例：/compare Obsidian vs Notion');
+    await replyWithComparePicker(ctx);
     return;
   }
 
@@ -220,4 +222,79 @@ function findDirectRelations(knowledge: VaultKnowledge, a: string, b: string) {
     }
   }
   return results;
+}
+
+// --- InlineKeyboard helpers ---
+
+/** Show top entities as InlineKeyboard buttons + ForceReply fallback */
+async function replyWithTopicPicker(ctx: Context, command: string, prompt: string): Promise<void> {
+  const knowledge = await loadAndAggregate();
+  if (!knowledge) {
+    await ctx.reply(
+      tagForceReply(command, prompt),
+      forceReplyMarkup('輸入主題…'),
+    );
+    return;
+  }
+
+  const topEntities = getTopEntities(knowledge, 6);
+  if (topEntities.length === 0) {
+    await ctx.reply(
+      tagForceReply(command, prompt),
+      forceReplyMarkup('輸入主題…'),
+    );
+    return;
+  }
+
+  // Build 2-column keyboard from top entities
+  const buttons: Array<{ text: string; callback_data: string }[]> = [];
+  for (let i = 0; i < topEntities.length; i += 2) {
+    const row = [Markup.button.callback(topEntities[i].name, `${command}:${topEntities[i].name}`)];
+    if (i + 1 < topEntities.length) {
+      row.push(Markup.button.callback(topEntities[i + 1].name, `${command}:${topEntities[i + 1].name}`));
+    }
+    buttons.push(row);
+  }
+
+  await ctx.reply(
+    tagForceReply(command, prompt),
+    Markup.inlineKeyboard(buttons),
+  );
+}
+
+/** Show top entity pairs as InlineKeyboard for /compare */
+async function replyWithComparePicker(ctx: Context): Promise<void> {
+  const knowledge = await loadAndAggregate();
+  if (!knowledge) {
+    await ctx.reply(
+      tagForceReply('compare', '用法：/compare <A> vs <B>'),
+      forceReplyMarkup('輸入 A vs B…'),
+    );
+    return;
+  }
+
+  const topEntities = getTopEntities(knowledge, 6);
+  if (topEntities.length < 2) {
+    await ctx.reply(
+      tagForceReply('compare', '用法：/compare <A> vs <B>'),
+      forceReplyMarkup('輸入 A vs B…'),
+    );
+    return;
+  }
+
+  // Generate comparison pairs from top entities
+  const pairs: Array<[string, string]> = [];
+  for (let i = 0; i < Math.min(topEntities.length, 4); i++) {
+    for (let j = i + 1; j < Math.min(topEntities.length, 4); j++) {
+      pairs.push([topEntities[i].name, topEntities[j].name]);
+      if (pairs.length >= 3) break;
+    }
+    if (pairs.length >= 3) break;
+  }
+
+  const buttons = pairs.map(([a, b]) => [
+    Markup.button.callback(`${a} vs ${b}`, `compare:${a} vs ${b}`),
+  ]);
+
+  await ctx.reply('選擇對比組合或輸入自訂：', Markup.inlineKeyboard(buttons));
 }

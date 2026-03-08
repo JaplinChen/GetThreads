@@ -10,6 +10,7 @@ import type { ExtractedContent } from '../extractors/types.js';
 import { camoufoxPool } from '../utils/camoufox-pool.js';
 import { saveToVault } from '../saver.js';
 import { classifyContent } from '../classifier.js';
+import { tagForceReply, forceReplyMarkup } from '../utils/force-reply.js';
 
 type SupportedPlatform = 'threads' | 'x';
 
@@ -145,9 +146,8 @@ export async function handleTimeline(ctx: Context, config: AppConfig): Promise<v
 
   if (!args) {
     await ctx.reply(
-      '用法：/timeline @username [數量]\n' +
-      '例：/timeline @zuck 10\n' +
-      '目前支援 Threads 平台。',
+      tagForceReply('timeline', '請輸入用戶名：\n例：@zuck 10\n目前支援 Threads 平台。'),
+      forceReplyMarkup('輸入 @username…'),
     );
     return;
   }

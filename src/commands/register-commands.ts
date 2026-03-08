@@ -168,6 +168,28 @@ export function registerCommands(
     });
   });
 
+  // --- InlineKeyboard callback handlers ---
+  bot.action(/^(recommend|brief):(.+)$/, (ctx) => {
+    const [, cmd, topic] = ctx.match!;
+    ctx.answerCbQuery().catch(() => {});
+    (ctx as any).message = { text: `/${cmd} ${topic}` };
+    const handler = cmd === 'recommend' ? handleRecommend : handleBrief;
+    handler(ctx as any, config).catch(err => {
+      console.error(`[${cmd}]`, err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
+  bot.action(/^compare:(.+)$/, (ctx) => {
+    const arg = ctx.match![1];
+    ctx.answerCbQuery().catch(() => {});
+    (ctx as any).message = { text: `/compare ${arg}` };
+    handleCompare(ctx as any, config).catch(err => {
+      console.error('[compare]', err);
+      ctx.reply(formatErrorMessage(err)).catch(() => {});
+    });
+  });
+
   // --- Info commands ---
   bot.command('status', async (ctx) => {
     const uptime = Math.floor((Date.now() - startTime) / 1000);

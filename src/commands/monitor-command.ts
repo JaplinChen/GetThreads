@@ -9,6 +9,7 @@ import { searchReddit, webSearch, fetchJinaContent } from '../utils/search-servi
 import { saveToVault, isDuplicateUrl } from '../saver.js';
 import { classifyContent } from '../classifier.js';
 import { findExtractor } from '../utils/url-parser.js';
+import { tagForceReply, forceReplyMarkup } from '../utils/force-reply.js';
 
 /** Hosts excluded from /monitor results (auth-required, content not accessible). */
 const MONITOR_SKIP_HOSTS = new Set([
@@ -20,7 +21,10 @@ export async function handleMonitor(ctx: Context, config: AppConfig): Promise<vo
   const keyword = text.replace(/^\/monitor\s*/i, '').trim();
 
   if (!keyword) {
-    await ctx.reply('用法：/monitor <關鍵字>\n例：/monitor claude code');
+    await ctx.reply(
+      tagForceReply('monitor', '請輸入監控關鍵字：\n例：claude code'),
+      forceReplyMarkup('輸入關鍵字…'),
+    );
     return;
   }
 
@@ -89,7 +93,10 @@ export async function handleSearch(ctx: Context, config: AppConfig): Promise<voi
   const query = text.replace(/^\/(search|google)\s*/i, '').trim();
 
   if (!query) {
-    await ctx.reply('用法：/search <查詢>\n例：/search camoufox typescript');
+    await ctx.reply(
+      tagForceReply('search', '請輸入搜尋關鍵字：\n例：camoufox typescript'),
+      forceReplyMarkup('輸入搜尋關鍵字…'),
+    );
     return;
   }
 

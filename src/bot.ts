@@ -9,6 +9,7 @@ import { getTopKeywordsForCategory } from './learning/dynamic-classifier.js';
 import type { ExtractorWithComments } from './extractors/types.js';
 import { postProcess } from './enrichment/post-processor.js';
 import { registerCommands, formatErrorMessage } from './commands/register-commands.js';
+import { parseForceReplyTag } from './utils/force-reply.js';
 
 const startTime = Date.now();
 const stats = { urls: 0, saved: 0, errors: 0, recent: [] as string[] };
@@ -46,6 +47,17 @@ export function createBot(config: AppConfig): Telegraf {
 
   // Register all /commands (extracted to keep bot.ts under 300 lines)
   registerCommands(bot, config, stats, startTime);
+
+  // ForceReply interceptor — route replies to the original command
+  bot.on('message', (ctx, next) => {
+    if (!ctx.message || !('text' in ctx.message)) return next();
+    const replyTo = ctx.message.reply_to_message;
+    if (!replyTo || !('text' in replyTo) || !replyTo.from?.is_bot) return next();
+    const cmd = parseForceReplyTag(replyTo.text);
+    if (!cmd) return next();
+    (ctx.message as unknown as Record<string, unknown>).text = `/${cmd} ${ctx.message.text}`;
+    return next();
+  });
 
   // URL message handler — core save-to-vault logic
   bot.on('message', async (ctx) => {
