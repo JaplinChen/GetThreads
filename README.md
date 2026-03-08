@@ -229,4 +229,4 @@ src/
 
 ## 授權
 
-ISC
+[ISC License](https://opensource.org/licenses/ISC) — 可自由使用、複製、修改與散布，僅需保留版權聲明。
