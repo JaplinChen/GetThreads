@@ -1,12 +1,5 @@
 # GetThreads
 
-## 貢獻指南
-
-詳見 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。
-
-- Claude Code / Codex / 其他 AI 輔助工具皆歡迎使用
-- 提交前請通過 `npm run lint`、`npm run test`、`npm run build`
-
 **把社群內容變成你的第二大腦。**
 
 丟一個連結給 Telegram Bot，它會自動抓取文章、評論、圖片與影片，智慧分類後存成 Markdown 筆記到你的 Obsidian Vault。
@@ -254,6 +247,10 @@ src/
 </details>
 
 ---
+
+## 貢獻指南
+
+詳見 [`CONTRIBUTING.md`](./CONTRIBUTING.md)。歡迎使用 Claude Code / Codex 等 AI 輔助工具。
 
 ## 授權
 
