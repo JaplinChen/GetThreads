@@ -1,6 +1,6 @@
 /**
  * LLM prompt runner.
- * Priority: DDG AI Chat (Camoufox, free) → local CLI fallback.
+ * Priority: claude -p (fast, reliable via Max subscription) → DDG AI Chat fallback.
  */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -8,34 +8,13 @@ import { runViaDdgChat } from './ddg-chat.js';
 
 const execFileAsync = promisify(execFile);
 
-export type LocalLlmProvider = 'claude' | 'codex' | 'opencode';
+const CLI_TIMEOUT_MS = 15_000;
 
 interface RunOptions {
   timeoutMs?: number;
 }
 
-/* ── Local CLI provider ──────────────────────────────────────────────── */
-
-function providerArgs(provider: LocalLlmProvider, prompt: string): { cmd: string; args: string[] } {
-  switch (provider) {
-    case 'claude':
-      return { cmd: 'claude', args: ['-p', prompt] };
-    case 'codex':
-      return { cmd: 'codex', args: ['-p', prompt] };
-    case 'opencode':
-      return { cmd: 'opencode', args: ['-p', prompt] };
-    default:
-      return { cmd: 'claude', args: ['-p', prompt] };
-  }
-}
-
-function configuredProviders(): LocalLlmProvider[] {
-  const raw = (process.env.LLM_PROVIDER ?? '').trim().toLowerCase();
-  if (raw === 'claude' || raw === 'codex' || raw === 'opencode') {
-    return [raw];
-  }
-  return ['claude', 'codex', 'opencode'];
-}
+/* ── CLI provider ────────────────────────────────────────────────────── */
 
 function isRecoverableCliError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -48,40 +27,39 @@ function isRecoverableCliError(err: unknown): boolean {
   );
 }
 
+async function runViaCli(prompt: string, timeoutMs: number): Promise<string | null> {
+  try {
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+    const { stdout } = await execFileAsync('claude', ['-p', prompt, '--max-turns', '1'], {
+      timeout: Math.min(timeoutMs, CLI_TIMEOUT_MS),
+      maxBuffer: 10 * 1024 * 1024,
+      windowsHide: true,
+      env,
+    });
+    const out = stdout.trim();
+    return out || null;
+  } catch (err) {
+    if (isRecoverableCliError(err)) return null;
+    return null;
+  }
+}
+
 /**
  * Run a prompt against LLM providers.
- * Priority: DDG AI Chat (Camoufox) → local CLI tools.
+ * Priority: claude -p (fast, Max subscription) → DDG AI Chat (Camoufox, free).
  * Returns null when no provider succeeds.
  */
 export async function runLocalLlmPrompt(prompt: string, options: RunOptions = {}): Promise<string | null> {
   const timeoutMs = options.timeoutMs ?? 30_000;
 
-  // 1) Try DuckDuckGo AI Chat via Camoufox (free, no login)
+  // 1) Try claude -p CLI (fast, ~10s, uses Max subscription)
+  const cliResult = await runViaCli(prompt, timeoutMs);
+  if (cliResult) return cliResult;
+
+  // 2) Fallback to DuckDuckGo AI Chat via Camoufox (free, slower)
   const ddgResult = await runViaDdgChat(prompt, timeoutMs);
   if (ddgResult) return ddgResult;
-
-  // 2) Fallback to local CLI providers
-  const providers = configuredProviders();
-  for (const provider of providers) {
-    const { cmd, args } = providerArgs(provider, prompt);
-    try {
-      // 清除 CLAUDECODE 環境變數，避免嵌套限制阻擋 claude -p
-      const env = { ...process.env };
-      delete env.CLAUDECODE;
-      const { stdout } = await execFileAsync(cmd, args, {
-        timeout: timeoutMs,
-        maxBuffer: 10 * 1024 * 1024,
-        windowsHide: true,
-        env,
-      });
-      const out = stdout.trim();
-      if (out) return out;
-    } catch (err) {
-      if (isRecoverableCliError(err)) {
-        continue;
-      }
-    }
-  }
 
   return null;
 }
