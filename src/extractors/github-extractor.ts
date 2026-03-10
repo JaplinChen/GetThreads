@@ -1,6 +1,6 @@
 ﻿import type { ExtractedContent, Extractor } from './types.js';
 import { fetchWithTimeout } from '../utils/fetch-with-timeout.js';
-import { stripHtmlTags } from './web-cleaner.js';
+import { htmlFragmentToMarkdown } from '../utils/html-to-markdown.js';
 
 const GITHUB_PATTERN = /github\.com\/([\w.-]+)\/([\w.-]+)(?:\/(?:issues|pull)\/(\d+))?/i;
 
@@ -27,11 +27,10 @@ function extractMeta(html: string, key: string): string {
   return '';
 }
 
-function extractReadmeText(html: string): string {
+function extractReadmeMarkdown(html: string): string {
   const m = html.match(/<article[^>]*class=["'][^"']*markdown-body[^"']*["'][^>]*>([\s\S]*?)<\/article>/i);
   if (!m?.[1]) return '';
-  const plain = stripHtmlTags(m[1]).replace(/\n{3,}/g, '\n\n').trim();
-  return plain.length > 5000 ? plain.slice(0, 5000) + '\n\n...(truncated)' : plain;
+  return htmlFragmentToMarkdown(m[1]);
 }
 
 export const githubExtractor: Extractor = {
@@ -74,7 +73,7 @@ export const githubExtractor: Extractor = {
       const kind = isPR ? 'PR' : 'Issue';
       title = `[${kind} #${number}] ${title}`;
     } else {
-      const readme = extractReadmeText(html);
+      const readme = extractReadmeMarkdown(html);
       if (readme) text = `${text}\n\n${readme}`;
     }
 
@@ -84,7 +83,7 @@ export const githubExtractor: Extractor = {
       authorHandle: `@${owner}`,
       title: title.slice(0, 120),
       text,
-      body: !isIssue && !isPR ? extractReadmeText(html) || undefined : undefined,
+      body: !isIssue && !isPR ? extractReadmeMarkdown(html) || undefined : undefined,
       images: ogImage ? [ogImage] : [],
       videos: [],
       date: new Date().toISOString().split('T')[0],

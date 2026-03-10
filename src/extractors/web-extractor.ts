@@ -2,6 +2,7 @@
 import type { ExtractedContent, Extractor } from './types.js';
 import { fetchWithTimeout } from '../utils/fetch-with-timeout.js';
 import { stripHtmlTags } from './web-cleaner.js';
+import { htmlToMarkdown, htmlToMarkdownWithBrowser } from '../utils/html-to-markdown.js';
 
 function decodeHtml(s: string): string {
   return s
@@ -35,7 +36,8 @@ function extractTitle(html: string): string {
   return decodeHtml(m[1]).replace(/\s+/g, ' ').trim().slice(0, 100) || 'Untitled';
 }
 
-function extractBody(html: string): string {
+/** Regex-based fallback when Readability cannot extract article content */
+function extractBodyFallback(html: string): string {
   const noScript = html
     .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -86,10 +88,32 @@ export const webExtractor: Extractor = {
     const html = await res.text();
     if (!html || html.length < 100) throw new Error('Web page returned empty content');
 
-    const title = extractTitle(html);
-    const description = extractMeta(html, 'description') || extractMeta(html, 'og:description');
-    const body = extractBody(html);
-    const text = [description, body].filter(Boolean).join('\n\n').trim() || '[No readable text]';
+    // Try Readability + Turndown first; if it fails, retry with Camoufox browser;
+    // final fallback to regex extraction
+    let parsed = htmlToMarkdown(html, res.url || url);
+    if (!parsed) {
+      try {
+        parsed = await htmlToMarkdownWithBrowser(res.url || url);
+      } catch {
+        // Camoufox unavailable — continue with regex fallback
+      }
+    }
+
+    let title: string;
+    let text: string;
+
+    if (parsed) {
+      title = parsed.title || extractTitle(html);
+      const description = extractMeta(html, 'description') || extractMeta(html, 'og:description');
+      text = [description, parsed.markdown].filter(Boolean).join('\n\n').trim();
+    } else {
+      title = extractTitle(html);
+      const description = extractMeta(html, 'description') || extractMeta(html, 'og:description');
+      const body = extractBodyFallback(html);
+      text = [description, body].filter(Boolean).join('\n\n').trim();
+    }
+
+    if (!text) text = '[No readable text]';
 
     const imageSet = new Set<string>();
     const ogImage = extractMeta(html, 'og:image');

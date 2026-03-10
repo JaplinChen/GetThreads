@@ -1,11 +1,4 @@
-/**
- * Threads extractor — uses Camoufox for both main post and comments.
- * DOM structure (discovered via analysis):
- *   - Container: [data-pressable-container]
- *   - Spans: span[dir="auto"] — [0]=username, [1]=timestamp, [2]=post text, [3+]=counts
- *   - No article / div[dir="auto"] elements; Threads uses span with dir="auto"
- *   - Public posts are accessible without login.
- */
+/** Threads extractor — Camoufox-based. Container: [data-pressable-container], spans: span[dir="auto"] */
 import type { ExtractedContent, ExtractorWithComments, ThreadComment } from './types.js';
 import { camoufoxPool } from '../utils/camoufox-pool.js';
 
@@ -36,10 +29,7 @@ function pickTitle(text: string, maxLen = 80): string {
   return (lines.find(l => l.trim().length > 0) ?? '').trim().slice(0, maxLen);
 }
 
-/** Extract post text and topic tags from spans inside a [data-pressable-container].
- *  Threads DOM: span[0]=username, span[1..N]=topic tags, span[N+1]=timestamp, rest=content+counts.
- *  Detects topic tags (between username and timestamp) and separates them from body text.
- */
+/** Extract post text and topic tags from spans. span[0]=username, [1..N]=tags, [N+1]=timestamp, rest=content */
 async function extractSpanText(
   container: import('playwright-core').Locator,
 ): Promise<{ text: string; tags: string[] }> {
@@ -171,23 +161,40 @@ export const threadsExtractor: ExtractorWithComments = {
         throw new Error('Threads: 無法找到貼文容器（頁面結構可能已變更）');
       }
 
-      // First container = the target post
-      const firstContainer = page.locator('[data-pressable-container]').first();
+      // Find the target container: usually the first, but for replies the
+      // parent post appears first. Scan all containers for the URL username.
+      const allContainers = await page.locator('[data-pressable-container]').all();
+      let targetContainer = page.locator('[data-pressable-container]').first();
+      let isReply = false;
 
-      // Validate username: first span[dir=auto] should match the URL username.
-      // If a different user appears, we've been redirected to the home feed
-      // (happens when the post is deleted or the URL is invalid).
-      const firstSpans = await firstContainer.locator('span[dir="auto"]').all();
-      if (firstSpans.length > 0) {
-        const handleOnPage = (await firstSpans[0].innerText().catch(() => '')).trim();
-        if (handleOnPage && handleOnPage.toLowerCase() !== username.toLowerCase()) {
-          throw new Error(
-            `Threads: 貼文不存在或已被刪除（期望 @${username}，頁面顯示 @${handleOnPage}）`,
-          );
+      for (const container of allContainers) {
+        const spans = await container.locator('span[dir="auto"]').all();
+        if (spans.length === 0) continue;
+        const handle = (await spans[0].innerText().catch(() => '')).trim();
+        if (handle.toLowerCase() === username.toLowerCase()) {
+          targetContainer = container;
+          isReply = container !== allContainers[0];
+          break;
         }
       }
 
-      const { text: spanText, tags } = await extractSpanText(firstContainer);
+      // If none matched, verify we haven't been redirected to the home feed
+      const firstSpans = await targetContainer.locator('span[dir="auto"]').all();
+      if (firstSpans.length > 0) {
+        const handleOnPage = (await firstSpans[0].innerText().catch(() => '')).trim();
+        if (handleOnPage && handleOnPage.toLowerCase() !== username.toLowerCase()) {
+          // Final check: did the URL change (redirect to feed)?
+          const currentUrl = page.url();
+          if (!currentUrl.includes(match[2])) {
+            throw new Error(
+              `Threads: 貼文不存在或已被刪除（期望 @${username}，頁面顯示 @${handleOnPage}）`,
+            );
+          }
+          // URL still has the post ID — likely a repost or quote. Proceed.
+        }
+      }
+
+      const { text: spanText, tags } = await extractSpanText(targetContainer);
       let text = spanText;
 
       // Fallback: try reading from page title (Threads sets title = post text)
@@ -202,16 +209,19 @@ export const threadsExtractor: ExtractorWithComments = {
         throw new Error('Threads: 無法提取貼文文字（span[dir=auto] 未找到）');
       }
 
-      // Author: first span in container = @username handle (without @)
+      // Author: first span in target container = @username handle (without @)
       let author = username;
-      if (firstSpans.length > 0) {
-        const maybeHandle = await firstSpans[0].innerText().catch(() => '');
+      const targetSpans = await targetContainer.locator('span[dir="auto"]').all();
+      if (targetSpans.length > 0) {
+        const maybeHandle = await targetSpans[0].innerText().catch(() => '');
         if (maybeHandle.trim()) author = maybeHandle.trim();
       }
 
-      // Date: try time element first, then default to today
-      const timeAttr = await page
-        .locator('time').first().getAttribute('datetime').catch(() => null);
+      // For replies, try to get the precise time from the target container
+      const timeAttr = await targetContainer
+        .locator('time').first().getAttribute('datetime').catch(() =>
+          page.locator('time').first().getAttribute('datetime').catch(() => null),
+        );
       const date = timeAttr
         ? new Date(timeAttr).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
