@@ -13,6 +13,17 @@ data/
 bot.log
 nul
 
+# Temp / test output
+temp/
+output.json
+test-output.json
+translation.json
+translation_output.json
+claude_stderr.txt
+
+# OpenCode local DB
+.opencode/
+
 # Local helper scripts (not part of runtime build)
 scripts/
 test.ts
