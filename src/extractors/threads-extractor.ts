@@ -18,37 +18,76 @@ function looksLikeTimestamp(text: string): boolean {
   return /^\d{1,3}[smhdw]$/.test(t) || /^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(t);
 }
 
-/** Extract post text from spans inside a [data-pressable-container].
- *  Instead of relying on a fixed span index, finds the longest text span
- *  that isn't a username or timestamp — robust against DOM structure changes.
+/** Check if text looks like a URL display (e.g. "youtube.com/watch…") */
+function looksLikeUrl(text: string): boolean {
+  const t = text.trim();
+  return /^[\w.-]+\.(com|net|org|io|dev|tv|me|co)\b/i.test(t) || /^https?:\/\//i.test(t);
+}
+
+/** Pick the best title line: skip URL-only and very short topic-tag lines */
+function pickTitle(text: string, maxLen = 80): string {
+  const lines = text.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 5 && !looksLikeUrl(trimmed)) {
+      return trimmed.slice(0, maxLen);
+    }
+  }
+  return (lines.find(l => l.trim().length > 0) ?? '').trim().slice(0, maxLen);
+}
+
+/** Extract post text and topic tags from spans inside a [data-pressable-container].
+ *  Threads DOM: span[0]=username, span[1..N]=topic tags, span[N+1]=timestamp, rest=content+counts.
+ *  Detects topic tags (between username and timestamp) and separates them from body text.
  */
 async function extractSpanText(
   container: import('playwright-core').Locator,
-): Promise<string> {
+): Promise<{ text: string; tags: string[] }> {
   try {
     const spans = await container.locator('span[dir="auto"]').all();
-    if (spans.length < 2) return '';
+    if (spans.length < 2) return { text: '', tags: [] };
 
-    // Collect all span texts (skip span[0] which is username)
-    const candidates: { idx: number; text: string }[] = [];
+    // Gather all span texts (skip span[0] = username)
+    const allSpans: { idx: number; text: string }[] = [];
     for (let i = 1; i < spans.length; i++) {
       const raw = await spans[i].innerText().catch(() => '');
       const cleaned = raw.replace(/\s{2,}Translate\s*$/, '').trim();
-      if (cleaned && !looksLikeTimestamp(cleaned)) {
-        candidates.push({ idx: i, text: cleaned });
+      allSpans.push({ idx: i, text: cleaned });
+    }
+
+    // Find the timestamp position — first span matching looksLikeTimestamp
+    const tsPos = allSpans.findIndex(s => looksLikeTimestamp(s.text));
+
+    // Spans before timestamp = topic tags (e.g. "IT工具", "科技")
+    const tags: string[] = [];
+    if (tsPos > 0) {
+      for (let i = 0; i < tsPos; i++) {
+        if (allSpans[i].text && allSpans[i].text.length <= 30) {
+          tags.push(allSpans[i].text);
+        }
       }
     }
 
-    if (candidates.length === 0) return '';
-    // Filter out engagement counts, noise labels, and very short spans
-    const NOISE = /^(\d+|Author|Verified|Translate|翻譯|·|原創|作者)$/i;
+    // Content candidates: spans AFTER timestamp only
+    const startIdx = tsPos >= 0 ? tsPos + 1 : 0;
+    const candidates: { idx: number; text: string }[] = [];
+    for (let i = startIdx; i < allSpans.length; i++) {
+      const s = allSpans[i];
+      if (s.text && !looksLikeTimestamp(s.text)) {
+        candidates.push(s);
+      }
+    }
+
+    if (candidates.length === 0) return { text: '', tags };
+    const NOISE = /^(\d+|[\d.]+[KkMm]|Author|Verified|Translate|翻譯|·|原創|作者)$/i;
     const meaningful = candidates.filter(c => c.text.length > 2 && !NOISE.test(c.text));
-    if (meaningful.length === 0) return candidates.sort((a, b) => b.text.length - a.text.length)[0].text;
-    // Combine all meaningful text spans (title + body) in DOM order
+    if (meaningful.length === 0) {
+      return { text: candidates.sort((a, b) => b.text.length - a.text.length)[0].text, tags };
+    }
     meaningful.sort((a, b) => a.idx - b.idx);
-    return meaningful.map(c => c.text).join('\n');
+    return { text: meaningful.map(c => c.text).join('\n'), tags };
   } catch {
-    return '';
+    return { text: '', tags: [] };
   }
 }
 
@@ -108,7 +147,12 @@ export const threadsExtractor: ExtractorWithComments = {
     const { page, release } = await camoufoxPool.acquire();
     try {
       await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 });
-      await page.waitForTimeout(2000);
+      // Wait for content spans to render (not just container existence)
+      await page.waitForSelector(
+        '[data-pressable-container] span[dir="auto"]',
+        { timeout: 10_000 },
+      ).catch(() => {});
+      await page.waitForTimeout(1500);
 
       // Verify we have a post container (not a 404 page)
       const containerCount = await page
@@ -143,7 +187,8 @@ export const threadsExtractor: ExtractorWithComments = {
         }
       }
 
-      let text = await extractSpanText(firstContainer);
+      const { text: spanText, tags } = await extractSpanText(firstContainer);
+      let text = spanText;
 
       // Fallback: try reading from page title (Threads sets title = post text)
       if (!text) {
@@ -174,7 +219,8 @@ export const threadsExtractor: ExtractorWithComments = {
       const images = await extractImages(page);
       const videoUrls = await extractVideos(page);
 
-      const title = text.split('\n')[0].slice(0, 80);
+      // Smart title: skip URL-only lines and very short topic tags
+      const title = pickTitle(text);
       return {
         platform: 'threads',
         author,
@@ -185,6 +231,7 @@ export const threadsExtractor: ExtractorWithComments = {
         videos: videoUrls.map(v => ({ url: v })),
         date,
         url,
+        extraTags: tags.length > 0 ? tags : undefined,
       };
     } finally {
       await release();
@@ -216,7 +263,7 @@ export const threadsExtractor: ExtractorWithComments = {
           const commentAuthor = await spans[0].innerText().catch(() => '');
           // Use extractSpanText (longest non-timestamp span) instead of fixed index
           // because self-thread replies have "·" and "Author" labels before the text
-          const text = await extractSpanText(container);
+          const { text } = await extractSpanText(container);
 
           if (text) {
             // Get handle from link
