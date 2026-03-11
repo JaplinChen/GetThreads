@@ -20,6 +20,7 @@ import {
 import { runCommandTask } from './command-runner.js';
 import { formatErrorMessage } from '../core/errors.js';
 import { logger } from '../core/logger.js';
+import { registerForceReplyHandler } from '../messages/force-reply-router.js';
 import { BOT_COMMANDS_MENU, HELP_TEXT } from './command-help.js';
 import { registerLearningCommands } from './register-learning-commands.js';
 import { registerInfoCommands, type CommandStats } from './register-info-commands.js';
@@ -102,6 +103,16 @@ export function registerCommands(
     }
     await handleCompareByArg(ctx, arg);
   });
+
+  // --- ForceReply dispatch (direct handler calls, bypasses bot.command matching) ---
+  registerForceReplyHandler('search', (ctx) =>
+    runCommandTask(ctx, 'search', () => handleSearch(ctx, config), formatErrorMessage));
+  registerForceReplyHandler('monitor', (ctx) =>
+    runCommandTask(ctx, 'monitor', () => handleMonitor(ctx, config), formatErrorMessage));
+  registerForceReplyHandler('timeline', (ctx) =>
+    runCommandTask(ctx, 'timeline', () => handleTimeline(ctx, config), formatErrorMessage));
+  registerForceReplyHandler('compare', (ctx) =>
+    runCommandTask(ctx, 'compare', () => handleCompare(ctx, config), formatErrorMessage));
 
   registerInfoCommands(bot, stats, startTime);
 

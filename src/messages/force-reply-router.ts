@@ -1,5 +1,13 @@
-﻿import type { Telegraf } from 'telegraf';
+import type { Context, Telegraf } from 'telegraf';
 import { parseForceReplyTag } from '../utils/force-reply.js';
+
+type ForceReplyHandler = (ctx: Context) => Promise<void>;
+const handlers = new Map<string, ForceReplyHandler>();
+
+/** Register a handler that ForceReply router can dispatch to directly. */
+export function registerForceReplyHandler(cmd: string, handler: ForceReplyHandler): void {
+  handlers.set(cmd, handler);
+}
 
 export function registerForceReplyRouter(bot: Telegraf): void {
   bot.on('message', (ctx, next) => {
@@ -10,11 +18,13 @@ export function registerForceReplyRouter(bot: Telegraf): void {
     const cmd = parseForceReplyTag(replyTo.text);
     if (!cmd) return next();
 
-    const newText = `/${cmd} ${ctx.message.text}`;
+    const handler = handlers.get(cmd);
+    if (!handler) return next();
+
+    // Rewrite text so the command handler can parse the query normally
     const msg = ctx.message as unknown as Record<string, unknown>;
-    msg.text = newText;
-    // Inject bot_command entity so Telegraf's command middleware matches
-    msg.entities = [{ type: 'bot_command', offset: 0, length: cmd.length + 1 }];
-    return next();
+    msg.text = `/${cmd} ${ctx.message.text}`;
+
+    return handler(ctx);
   });
 }
