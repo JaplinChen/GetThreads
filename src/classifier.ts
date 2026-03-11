@@ -56,9 +56,22 @@ const AI_SUBCATEGORY_REFINEMENT: Array<{ name: string; keywords: string[] }> = [
 
 /** 當初次分類命中通用 AI 時，用 title+body 合併文本精煉到子分類 */
 function refineAISubcategory(title: string, body: string): string | null {
-  const haystack = `${title} ${body}`.toLowerCase();
+  const titleLower = title.toLowerCase();
+  const bodyLower = body.toLowerCase();
+
   for (const sub of AI_SUBCATEGORY_REFINEMENT) {
-    if (sub.keywords.some((kw) => haystack.includes(kw.toLowerCase()))) {
+    // 標題命中 → 直接歸類（高信心）
+    if (sub.keywords.some((kw) => titleLower.includes(kw.toLowerCase()))) {
+      return sub.name;
+    }
+  }
+
+  // Body 命中需要至少 2 個不同關鍵詞才歸類（避免偶然提及）
+  for (const sub of AI_SUBCATEGORY_REFINEMENT) {
+    const matchCount = sub.keywords.filter(
+      (kw) => bodyLower.includes(kw.toLowerCase()),
+    ).length;
+    if (matchCount >= 2) {
       return sub.name;
     }
   }
@@ -108,10 +121,10 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     // 保留複合詞「入門指南」「入門教學」「零基礎入門」避免誤傷真正的教學文
     name: 'AI/學習',
     keywords: [
-      '完全教程', '教程', '教學', '小白', '新手',
+      '完全教程', '教程', '小白', '新手',
       '入門指南', '入门指南', '入門完全', '入门完全', '入門教學', '入门教学',
       '从0开始', '从零开始', '零基礎', '零基础', '零基礎入門', '零基础入门',
-      'tutorial', 'getting started', '安装后必看', '手把手', '3分钟', '0代码',
+      'getting started', '安装后必看', '手把手', '3分钟', '0代码',
     ],
   },
   {
@@ -164,17 +177,16 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
   {
     name: '科技',
     keywords: [
-      'tech', 'software', 'hardware', 'apple', 'google', 'microsoft',
-      'meta', 'nvidia', 'chip', 'semiconductor', '晶片', '半導體',
-      '軟體', '硬體', '科技', 'developer', 'github', 'open source',
+      'hardware', 'chip', 'semiconductor', '晶片', '半導體',
+      '硬體', '科技新聞', 'apple silicon', '休眠機制',
     ],
   },
   {
     name: '程式設計',
     keywords: [
-      'code', 'coding', 'programming', 'javascript', 'typescript',
-      'python', 'rust', 'react', 'nextjs', 'node', 'api', 'framework',
-      'library', '程式', '開發', 'backend', 'frontend', 'database',
+      'programming', 'javascript', 'typescript',
+      'python', 'rust', 'react', 'nextjs',
+      '程式設計', 'backend', 'frontend', 'database', '訂閱管理',
     ],
   },
   {
@@ -196,15 +208,15 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
   {
     name: '設計',
     keywords: [
-      'design', 'ux', 'ui', 'figma', 'typography', 'brand', 'logo',
-      'visual', '設計', '排版', '品牌', '視覺', 'prototype', 'wireframe',
+      'ux design', 'ui design', 'figma', 'typography', 'brand design', 'logo',
+      'visual design', '排版', '品牌設計', '視覺設計', 'prototype', 'wireframe',
     ],
   },
   {
     name: '行銷',
     keywords: [
-      'marketing', 'seo', 'ads', 'growth', 'content', 'social media',
-      'campaign', '行銷', '廣告', '成長', '內容', '流量', 'viral', '病毒',
+      'marketing', 'seo', 'google ads', 'facebook ads', 'growth hack', 'content marketing',
+      'social media marketing', 'campaign', '行銷', '廣告', '流量', 'viral',
     ],
   },
   {
@@ -221,9 +233,8 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
   {
     name: '生產力',
     keywords: [
-      'productivity', 'workflow', 'habit', 'focus', '生產力', '工作流',
-      '效率', 'automation', '自動化', 'tool', '工具', '筆記',
-      'notion',
+      'productivity', 'habit', 'focus', '生產力', '工作流',
+      '效率', 'notion', 'syncthing', '檔案同步', '磁盤清理', '系統優化',
     ],
   },
   {
