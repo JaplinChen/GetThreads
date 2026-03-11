@@ -212,17 +212,19 @@ export async function saveToVault(
       if (r.status === 'fulfilled') localImagePaths.push(r.value);
     }
 
-    // Copy local video files to vault attachments
+    // Copy local video files to vault attachments (only when SAVE_VIDEOS=true)
     const localVideoPaths: string[] = [];
-    for (let i = 0; i < content.videos.length; i++) {
-      const v = content.videos[i];
-      if (v.localPath) {
-        try {
-          const ext = extname(v.localPath) || '.mp4';
-          const vidName = `${imgSlug}-vid${i}${ext}`;
-          await copyFile(v.localPath, join(imagesDir, vidName));
-          localVideoPaths.push(`attachments/getthreads/${content.platform}/${vidName}`);
-        } catch { /* skip if copy fails */ }
+    if (process.env.SAVE_VIDEOS === 'true') {
+      for (let i = 0; i < content.videos.length; i++) {
+        const v = content.videos[i];
+        if (v.localPath) {
+          try {
+            const ext = extname(v.localPath) || '.mp4';
+            const vidName = `${imgSlug}-vid${i}${ext}`;
+            await copyFile(v.localPath, join(imagesDir, vidName));
+            localVideoPaths.push(`attachments/getthreads/${content.platform}/${vidName}`);
+          } catch { /* skip if copy fails */ }
+        }
       }
     }
 

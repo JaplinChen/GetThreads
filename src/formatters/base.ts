@@ -146,7 +146,7 @@ export function assembleNote(
     lines.push(`> Translated from: ${langLabel[t.detectedLanguage] ?? 'Other'}`, '');
   }
 
-  const { text: bodyText, usedPaths } = formatter.formatBody(displayText, imageUrlMap, localVideoPaths);
+  const { text: bodyText, usedPaths, inlinedVideoIndices: bodyInlinedVideos } = formatter.formatBody(displayText, imageUrlMap, localVideoPaths, content.videos);
   lines.push(bodyText, '');
 
   const cleanSummary = content.enrichedSummary
@@ -187,7 +187,7 @@ export function assembleNote(
     for (const imgPath of remainingImages) lines.push(`![](${imgPath})`, '');
   }
 
-  const inlinedVideoIndices = new Set<number>();
+  const inlinedVideoIndices = new Set<number>(bodyInlinedVideos);
   for (let i = 0; i < localVideoPaths.length; i++) {
     if (usedPaths.has(localVideoPaths[i])) inlinedVideoIndices.add(i);
   }

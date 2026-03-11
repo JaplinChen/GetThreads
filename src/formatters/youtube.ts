@@ -4,23 +4,30 @@ import { linkifyUrls, replaceInlineImages } from './shared.js';
 
 /** YouTube formatter — inline thumbnails + inline video embeds for playlists */
 export const youtubeFormatter: PlatformFormatter = {
-  formatBody(text: string, imageUrlMap?: Map<string, string>, localVideoPaths?: string[]): FormatBodyResult {
+  formatBody(text: string, imageUrlMap?: Map<string, string>, localVideoPaths?: string[], videos?: VideoInfo[]): FormatBodyResult {
     const { text: replaced, usedPaths } = replaceInlineImages(text, imageUrlMap);
     let result = linkifyUrls(replaced);
 
-    // Replace {{VIDEO:i}} markers with local video embeds
-    if (localVideoPaths) {
-      result = result.replace(/\{\{VIDEO:(\d+)\}\}/g, (_, idx) => {
-        const path = localVideoPaths[parseInt(idx)];
-        if (path) {
-          usedPaths.add(path);
-          return `![](${path})`;
-        }
-        return '';
-      });
-    }
+    // Replace {{VIDEO:i}} markers with local video embeds or URL links
+    const inlinedVideoIndices = new Set<number>();
+    result = result.replace(/\{\{VIDEO:(\d+)\}\}/g, (_, idx) => {
+      const i = parseInt(idx);
+      const path = localVideoPaths?.[i];
+      if (path) {
+        usedPaths.add(path);
+        inlinedVideoIndices.add(i);
+        return `![](${path})`;
+      }
+      // Fallback: inline URL link when no local file
+      const video = videos?.[i];
+      if (video?.url) {
+        inlinedVideoIndices.add(i);
+        return `[▶ 在 YouTube 觀看](${video.url})`;
+      }
+      return '';
+    });
 
-    return { text: result, usedPaths };
+    return { text: result, usedPaths, inlinedVideoIndices };
   },
 
   formatVideos(videos: VideoInfo[], localVideoPaths: string[]): string[] {

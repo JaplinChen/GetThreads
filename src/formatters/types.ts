@@ -5,12 +5,14 @@ export interface FormatBodyResult {
   text: string;
   /** Local image paths already embedded inline (to exclude from ## Images) */
   usedPaths: Set<string>;
+  /** Video indices already embedded inline (to exclude from ## Videos) */
+  inlinedVideoIndices?: Set<number>;
 }
 
 /** Each platform implements this to customise Markdown output */
 export interface PlatformFormatter {
   /** Format the main body text (handle inline images, linkify, etc.) */
-  formatBody(text: string, imageUrlMap?: Map<string, string>, localVideoPaths?: string[]): FormatBodyResult;
+  formatBody(text: string, imageUrlMap?: Map<string, string>, localVideoPaths?: string[], videos?: VideoInfo[]): FormatBodyResult;
 
   /** Render the videos section lines */
   formatVideos(videos: VideoInfo[], localVideoPaths: string[]): string[];

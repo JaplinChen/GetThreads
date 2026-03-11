@@ -46,7 +46,7 @@ function makeContent(): ExtractedContent {
 describe('enrich-content-service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockClassifyContent.mockReturnValue('技術');
+    mockClassifyContent.mockReturnValue('嚙豬術');
     mockGetTopKeywordsForCategory.mockReturnValue(['ai', 'agent']);
     mockPostProcess.mockResolvedValue(undefined as never);
     mockEnrichContent.mockResolvedValue({} as never);
@@ -60,10 +60,11 @@ describe('enrich-content-service', () => {
       vaultPath: 'v',
       enableTranslation: true,
       maxLinkedUrls: 5,
+      saveVideos: false,
     });
 
     expect(mockClassifyContent).toHaveBeenCalledWith('T', 'Body');
-    expect(content.category).toBe('技術');
+    expect(content.category).toBe('嚙豬術');
     expect(mockPostProcess).toHaveBeenCalledTimes(1);
   });
 
@@ -74,7 +75,7 @@ describe('enrich-content-service', () => {
       keywords: ['k1'],
       summary: 's1',
       title: 'new title',
-      category: '新分類',
+      category: '嚙編嚙踝蕭嚙踝蕭',
     } as never);
 
     await enrichExtractedContent(content, {
@@ -82,16 +83,17 @@ describe('enrich-content-service', () => {
       vaultPath: 'v',
       enableTranslation: true,
       maxLinkedUrls: 5,
+      saveVideos: false,
     });
 
-    expect(mockGetTopKeywordsForCategory).toHaveBeenCalledWith('技術');
+    expect(mockGetTopKeywordsForCategory).toHaveBeenCalledWith('嚙豬術');
     expect(mockEnrichContent).toHaveBeenCalledTimes(1);
     const aiText = mockEnrichContent.mock.calls[0][1] as string;
     expect(aiText).toContain(AI_TRANSCRIPT_PREFIX);
     expect(content.enrichedKeywords).toEqual(['k1']);
     expect(content.enrichedSummary).toBe('s1');
     expect(content.title).toBe('new title');
-    expect(content.category).toBe('新分類');
+    expect(content.category).toBe('嚙編嚙踝蕭嚙踝蕭');
   });
 
   it('runs AI enrich without requiring local provider config', async () => {
@@ -102,6 +104,7 @@ describe('enrich-content-service', () => {
       vaultPath: 'v',
       enableTranslation: false,
       maxLinkedUrls: 2,
+      saveVideos: false,
     });
 
     expect(mockEnrichContent).toHaveBeenCalledTimes(1);
@@ -116,6 +119,7 @@ describe('enrich-content-service', () => {
       vaultPath: 'v',
       enableTranslation: true,
       maxLinkedUrls: 5,
+      saveVideos: false,
     })).resolves.toBeUndefined();
   });
 });

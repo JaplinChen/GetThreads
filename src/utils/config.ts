@@ -12,6 +12,8 @@ export interface AppConfig {
   enableTranslation: boolean;
   /** Max URLs to enrich from post/comments (default: 5) */
   maxLinkedUrls: number;
+  /** Save downloaded videos to vault attachments (default: false) */
+  saveVideos: boolean;
 }
 
 export function loadConfig(): AppConfig {
@@ -45,5 +47,6 @@ export function loadConfig(): AppConfig {
     allowedUserIds,
     enableTranslation: process.env.ENABLE_TRANSLATION === 'true',
     maxLinkedUrls: parseInt(process.env.MAX_LINKED_URLS ?? '5', 10) || 5,
+    saveVideos: process.env.SAVE_VIDEOS === 'true',
   };
 }
