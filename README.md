@@ -28,6 +28,7 @@ GetThreads 讓你在 Telegram 裡丟一個連結，**3 秒後它就躺在你的 
 - **互動式指令** — 缺參數時自動引導輸入，知識類指令提供快捷按鈕
 - **AI 增強** — OpenCode + MiniMax M2.5 Free 自動產生摘要與關鍵詞（DDG AI Chat 為免費備援）
 - **批次翻譯** — 英文/簡中筆記自動翻譯為繁體中文
+- **跨裝置同步** — 搭配 [Remotely Save](https://github.com/remotely-save/remotely-save) + [InfiniCLOUD](https://infini-cloud.net/) 免費 WebDAV，Windows / Mac / iPhone 三端同步
 
 </details>
 
@@ -149,6 +150,22 @@ npx camoufox-js fetch
 
 **想修改設定？**
 編輯 `.env` 檔案，或重新執行 `setup.bat`。
+
+</details>
+
+<details>
+<summary><strong>跨裝置同步（選配）</strong></summary>
+
+Vault 預設不儲存影片（`SAVE_VIDEOS=false`），實際大小約數十 MB，非常適合雲端同步。
+
+**推薦方案：[InfiniCLOUD](https://infini-cloud.net/)（免費 20GB WebDAV）+ [Remotely Save](https://github.com/remotely-save/remotely-save) 外掛**
+
+1. 註冊 InfiniCLOUD → My Page → 開啟 **Apps Connection** → 取得 WebDAV 位址與專用密碼
+2. Obsidian 安裝 **Remotely Save** 外掛 → Remote Service 選 **WebDAV** → 填入位址、帳號、WebDAV 密碼
+3. 建議啟用 **Password-Based Encryption**（E2E 加密）
+4. 三台裝置（Windows / Mac / iPhone）使用相同設定，首次同步後即可自動排程
+
+> 其他相容後端：OneDrive、Dropbox、S3、Synology NAS WebDAV。
 
 </details>
 
