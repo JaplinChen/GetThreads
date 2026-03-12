@@ -8,6 +8,7 @@ import { handleTimeline } from './timeline-command.js';
 import { handleMonitor, handleSearch } from './monitor-command.js';
 import { handleAnalyze, handleKnowledge, handleGaps, handleSkills } from './knowledge-command.js';
 import { handlePreferences, handleDistill } from './distill-command.js';
+import { handleConsolidate } from './consolidate-command.js';
 import {
   handleRecommend,
   handleBrief,
@@ -79,6 +80,7 @@ export function registerCommands(
   registerAsyncCommand(bot, 'skills', 'skills', config, handleSkills);
   registerAsyncCommand(bot, 'preferences', 'preferences', config, handlePreferences);
   registerAsyncCommand(bot, 'distill', 'distill', config, handleDistill);
+  registerAsyncCommand(bot, 'consolidate', 'consolidate', config, handleConsolidate);
 
   // --- InlineKeyboard callback handlers ---
   registerAsyncAction(bot, /^(recommend|brief):(.+)$/, 'knowledge-action', async (ctx) => {
