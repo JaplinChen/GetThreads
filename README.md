@@ -29,6 +29,8 @@ GetThreads 讓你在 Telegram 裡丟一個連結，**3 秒後它就躺在你的 
 - **時間軸抓取** — 一次撈回某人最近的所有貼文
 - **知識系統** — 深度分析 Vault 筆記，萃取實體、洞察與關係圖譜，自動生成用戶偏好模型與知識蒸餾報告
 - **記憶整合** — 自動發現跨筆記知識關聯，LLM 語義合成洞察，每週自動生成整合報告
+- **相關筆記推薦** — 兩層演算法（實體圖譜 → 關鍵字比對）自動在筆記底部附加 `[[wikilink]]` 連結 + 生成索引
+- **內容雷達** — 根據 Vault 高頻關鍵字自動搜尋新內容，定期存入 Vault 並推送 Telegram 通知
 - **互動式指令** — 缺參數時自動引導輸入，知識類指令提供快捷按鈕
 - **多模型智慧路由** — 依內容複雜度自動選擇 flash / standard / deep 免費模型，兼顧速度與品質
 - **批次翻譯** — 英文/簡中筆記自動翻譯為繁體中文
@@ -134,6 +136,8 @@ npx camoufox-js fetch
 | `/retry` | 重試失敗的連結 |
 | `/subscribe @用戶` | 訂閱自動追蹤新內容 |
 | `/quality` | Vault 品質報告 |
+| `/suggest` | 相關筆記推薦（自動連結，寫入筆記底部 + 索引） |
+| `/radar` | 內容雷達（自動搜尋+存入，on/off/auto/run/add/remove） |
 | `/status` | Bot 運行狀態與本次儲存統計 |
 | `/help` | 顯示說明 |
 
@@ -240,7 +244,9 @@ src/
 │   ├── knowledge-query-command.ts # /explore（推薦/簡報/對比）
 │   ├── digest-command.ts       # /digest（精華/蒸餾/整合）
 │   ├── ask-command.ts          # /ask Vault 知識問答
-│   └── discover-command.ts     # /discover GitHub 探索（含熱門掃描）
+│   ├── discover-command.ts     # /discover GitHub 探索（含熱門掃描）
+│   ├── suggest-command.ts     # /suggest 相關筆記推薦
+│   └── radar-command.ts       # /radar 內容雷達管理
 ├── extractors/                 # 各平台內容擷取器
 │   ├── x-extractor.ts          # Twitter/X（fxTweet API）
 │   ├── threads-extractor.ts    # Threads（Camoufox，topic tag 偵測）
@@ -278,7 +284,14 @@ src/
 │   ├── ai-enricher.ts          # OpenCode + MiniMax AI 摘要
 │   ├── reclassify-command.ts   # 重新分類（由 /learn 按鈕觸發）
 │   └── batch-translator.ts     # 批次翻譯（由 /learn 按鈕觸發）
+├── radar/                      # 內容雷達（自動搜尋+存入）
+│   ├── radar-types.ts          # 型別定義
+│   ├── radar-store.ts          # 設定持久化 + 自動查詢生成
+│   └── radar-service.ts        # 背景排程引擎（DDG 搜尋 → Vault）
 ├── vault/                      # Vault 維護工具
+│   ├── frontmatter-utils.ts    # 共用 frontmatter 解析
+│   ├── link-suggester.ts       # 相關筆記推薦（兩層 fallback）
+│   ├── link-writer.ts          # 筆記寫入 + 索引生成
 │   └── reprocess-helpers.ts    # 重處理輔助（備份、進度追蹤、fallback 重分類）
 └── utils/
     ├── config.ts               # 環境設定
