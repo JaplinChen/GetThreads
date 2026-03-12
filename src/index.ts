@@ -11,6 +11,8 @@ import { shouldAutoConsolidate, consolidateVault } from './knowledge/consolidato
 import { formatConsolidationReport, saveConsolidationNote } from './knowledge/consolidation-report.js';
 import { loadSubscriptions } from './subscriptions/subscription-store.js';
 import { startSubscriptionChecker } from './subscriptions/subscription-checker.js';
+import { loadRadarConfig } from './radar/radar-store.js';
+import { startRadarChecker } from './radar/radar-service.js';
 
 const config = loadConfig();
 registerAllExtractors();
@@ -57,5 +59,14 @@ loadSubscriptions()
     if (store.subscriptions.length > 0) startSubscriptionChecker(bot, config, store);
   })
   .catch((e) => logger.warn('subscribe', '載入訂閱失敗', { message: (e as Error).message }));
+
+// Start content radar in background
+loadRadarConfig()
+  .then((radarConfig) => {
+    if (radarConfig.enabled && radarConfig.queries.length > 0) {
+      startRadarChecker(bot, config, radarConfig);
+    }
+  })
+  .catch((e) => logger.warn('radar', '載入雷達失敗', { message: (e as Error).message }));
 
 new ProcessGuardian(bot).launch();

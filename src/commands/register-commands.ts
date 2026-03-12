@@ -16,6 +16,8 @@ import { createRetryHandler, createRetryActionHandler } from './retry-command.js
 import { handleSubscribe } from './subscribe-command.js';
 import { handleQuality } from './quality-command.js';
 import { handleDigestMenu, handleDigest } from './digest-command.js';
+import { handleSuggest } from './suggest-command.js';
+import { handleRadar, handleRadarAction } from './radar-command.js';
 import {
   handleExplore,
   handleRecommendByTopic,
@@ -87,6 +89,8 @@ export function registerCommands(
   registerAsyncCommand(bot, 'retry', 'retry', config, createRetryHandler(stats));
   registerAsyncCommand(bot, 'subscribe', 'subscribe', config, handleSubscribe);
   registerAsyncCommand(bot, 'quality', 'quality', config, handleQuality);
+  registerAsyncCommand(bot, 'suggest', 'suggest', config, handleSuggest);
+  registerAsyncCommand(bot, 'radar', 'radar', config, handleRadar);
 
   // --- InlineKeyboard: /knowledge sub-actions ---
   registerAsyncAction(bot, /^kb:(.+)$/, 'knowledge-action', async (ctx) => {
@@ -150,6 +154,13 @@ export function registerCommands(
   });
 
   registerAsyncAction(bot, /^retry:(.+)$/, 'retry-action', createRetryActionHandler(stats, config));
+
+  // --- InlineKeyboard: /radar sub-actions ---
+  registerAsyncAction(bot, /^radar:(.+)$/, 'radar-action', async (ctx) => {
+    const action = ctx.match![1];
+    await ctx.answerCbQuery().catch(() => {});
+    await handleRadarAction(ctx, action, config);
+  });
 
   // --- ForceReply dispatch ---
   registerForceReplyHandler('search', (ctx) =>

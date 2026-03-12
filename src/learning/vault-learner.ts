@@ -1,6 +1,7 @@
-﻿import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+﻿import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { logger } from '../core/logger.js';
+import { parseFrontmatter, parseArrayField, getAllMdFiles } from '../vault/frontmatter-utils.js';
 
 export interface NoteStats {
   category: string;
@@ -64,55 +65,6 @@ export function tokenize(text: string): string[] {
     if (bigram.length >= 5) tokens.push(bigram);
   }
   return tokens;
-}
-
-function parseFrontmatter(raw: string): Map<string, string> {
-  const lines = raw.split('\n');
-  if (lines[0]?.trim() !== '---') return new Map();
-
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i].trim() === '---') {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) return new Map();
-
-  const fields = new Map<string, string>();
-  for (const line of lines.slice(1, endIdx)) {
-    const colonIdx = line.indexOf(':');
-    if (colonIdx === -1) continue;
-    fields.set(line.slice(0, colonIdx).trim(), line.slice(colonIdx + 1).trim());
-  }
-  return fields;
-}
-
-function parseArrayField(val: string): string[] {
-  const match = val.match(/\[(.+)\]/);
-  if (!match) return [];
-
-  return match[1]
-    .split(',')
-    .map((s) => s.trim().replace(/^["']|["']$/g, ''))
-    .filter(Boolean);
-}
-
-async function getAllMdFiles(dir: string): Promise<string[]> {
-  const files: string[] = [];
-  try {
-    for (const entry of await readdir(dir)) {
-      const full = join(dir, entry);
-      if ((await stat(full)).isDirectory()) {
-        files.push(...await getAllMdFiles(full));
-      } else if (entry.endsWith('.md')) {
-        files.push(full);
-      }
-    }
-  } catch {
-    // Skip unreadable dirs
-  }
-  return files;
 }
 
 export async function scanVaultNotes(vaultPath: string): Promise<NoteStats[]> {

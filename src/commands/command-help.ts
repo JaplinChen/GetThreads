@@ -19,6 +19,8 @@ export const HELP_TEXT = [
   '/retry — 重試失敗的連結',
   '/subscribe @用戶 — 訂閱自動追蹤',
   '/quality — Vault 品質報告',
+  '/suggest — 相關筆記推薦（自動連結）',
+  '/radar — 內容雷達（自動搜尋+存入）',
   '/status — Bot 狀態與本次儲存',
   '/help — 顯示此說明',
 ].join('\n');
@@ -38,6 +40,8 @@ export const BOT_COMMANDS_MENU = [
   { command: 'retry', description: '重試失敗的連結' },
   { command: 'subscribe', description: '訂閱自動追蹤' },
   { command: 'quality', description: 'Vault 品質報告' },
+  { command: 'suggest', description: '相關筆記推薦' },
+  { command: 'radar', description: '內容雷達' },
   { command: 'status', description: 'Bot 狀態' },
   { command: 'help', description: '顯示說明' },
 ];
