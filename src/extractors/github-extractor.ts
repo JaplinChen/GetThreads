@@ -33,6 +33,34 @@ function extractReadmeMarkdown(html: string): string {
   return htmlFragmentToMarkdown(m[1]);
 }
 
+function extractDefaultBranch(html: string): string {
+  const m = html.match(/"defaultBranch":"([^"]+)"/);
+  return m?.[1] || 'main';
+}
+
+/** Scan README for a 繁體中文 link and return the filename (e.g. README_TW.md) */
+function findTraditionalChineseReadme(readme: string): string | null {
+  const m = readme.match(/\[繁體中文\]\(([^)]+)\)/);
+  if (!m?.[1]) return null;
+  const filename = m[1].split('/').pop();
+  return filename?.endsWith('.md') ? filename : null;
+}
+
+async function fetchChineseReadme(
+  owner: string, repo: string, branch: string, filename: string,
+): Promise<string | null> {
+  try {
+    const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filename}`;
+    const res = await fetchWithTimeout(rawUrl, 10_000, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (GetThreads Bot)' },
+    });
+    if (!res.ok) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
 export const githubExtractor: Extractor = {
   platform: 'github',
 
@@ -68,13 +96,23 @@ export const githubExtractor: Extractor = {
 
     let title = ogTitle || `${owner}/${repo}`;
     let text = ogDescription || '[No description]';
+    let body: string | undefined;
 
     if ((isIssue || isPR) && number) {
       const kind = isPR ? 'PR' : 'Issue';
       title = `[${kind} #${number}] ${title}`;
     } else {
-      const readme = extractReadmeMarkdown(html);
-      if (readme) text = `${text}\n\n${readme}`;
+      let readme = extractReadmeMarkdown(html);
+      if (readme) {
+        const twFile = findTraditionalChineseReadme(readme);
+        if (twFile) {
+          const branch = extractDefaultBranch(html);
+          const twReadme = await fetchChineseReadme(owner, repo, branch, twFile);
+          if (twReadme) readme = twReadme;
+        }
+        text = `${text}\n\n${readme}`;
+        body = readme;
+      }
     }
 
     return {
@@ -83,7 +121,7 @@ export const githubExtractor: Extractor = {
       authorHandle: `@${owner}`,
       title: title.slice(0, 120),
       text,
-      body: !isIssue && !isPR ? extractReadmeMarkdown(html) || undefined : undefined,
+      body,
       images: ogImage ? [ogImage] : [],
       videos: [],
       date: new Date().toISOString().split('T')[0],
