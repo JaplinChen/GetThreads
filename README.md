@@ -25,6 +25,7 @@ GetThreads 讓你在 Telegram 裡丟一個連結，**3 秒後它就躺在你的 
 - **跨平台搜尋** — 在 Telegram 裡搜 DuckDuckGo + Reddit
 - **時間軸抓取** — 一次撈回某人最近的所有貼文
 - **知識系統** — 深度分析 Vault 筆記，萃取實體、洞察與關係圖譜，自動生成用戶偏好模型與知識蒸餾報告
+- **記憶整合** — 自動發現跨筆記知識關聯，LLM 語義合成洞察，每週自動生成整合報告
 - **互動式指令** — 缺參數時自動引導輸入，知識類指令提供快捷按鈕
 - **AI 增強** — OpenCode + MiniMax M2.5 Free 自動產生摘要與關鍵詞（DDG AI Chat 為免費備援）
 - **批次翻譯** — 英文/簡中筆記自動翻譯為繁體中文
@@ -127,6 +128,7 @@ npx camoufox-js fetch
 | `/skills` | 高密度主題 Skill 建議 |
 | `/preferences` | 用戶偏好模型（來源、分類、關鍵字統計） |
 | `/distill` | 知識蒸餾（核心原則 + 歸檔候選） |
+| `/consolidate` | 整合近期知識，發現跨筆記洞察 |
 | `/recent` | 本次啟動已儲存的內容 |
 | `/status` | Bot 運行狀態與統計 |
 | `/learn` | 重新掃描 Vault 更新分類規則 |
@@ -190,7 +192,7 @@ npx tsc --noEmit # 型別檢查
 - **Camoufox** — 反偵測瀏覽器（Firefox 基底），處理需 JS 渲染的平台
 - **ProcessGuardian** — 防止 409 polling 衝突，指數退避自動重試
 - **OpenCode CLI** + MiniMax M2.5 Free — AI 摘要與關鍵字增強（免費），DDG AI Chat 為備援
-- **知識系統** — 實體萃取、知識圖譜、缺口分析、Skill 自動生成、用戶偏好萃取、知識蒸餾
+- **知識系統** — 實體萃取、知識圖譜、缺口分析、Skill 自動生成、用戶偏好萃取、知識蒸餾、記憶整合
 - 所有長任務（timeline / monitor / learn / reclassify）採 fire-and-forget：先回覆「處理中」→ 背景執行 → 完成通知
 - 評論自動篩選：過濾純 emoji 和過短反應，只保留有意義的討論
 - URL 去重快取：避免重複儲存相同內容
@@ -219,7 +221,8 @@ src/
 │   ├── timeline-command.ts     # /timeline
 │   ├── monitor-command.ts      # /monitor + /search
 │   ├── knowledge-command.ts    # /analyze + /knowledge + /gaps + /skills
-│   └── knowledge-query-command.ts # /recommend + /brief + /compare
+│   ├── knowledge-query-command.ts # /recommend + /brief + /compare
+│   └── consolidate-command.ts  # /consolidate 記憶整合
 ├── extractors/                 # 各平台內容擷取器
 │   ├── x-extractor.ts          # Twitter/X（fxTweet API）
 │   ├── threads-extractor.ts    # Threads（Camoufox，topic tag 偵測）
@@ -245,6 +248,8 @@ src/
 │   ├── skill-generator.ts      # 高密度主題 → Skill 自動生成
 │   ├── preference-extractor.ts # 用戶偏好模型（零 LLM 純統計）
 │   ├── distiller.ts            # 知識蒸餾（核心原則 + 歸檔候選）
+│   ├── consolidator.ts         # 記憶整合（跨筆記實體叢集 + LLM 洞察）
+│   ├── consolidation-report.ts # 整合報告格式化與 Vault 存檔
 │   └── types.ts                # 知識系統型別
 ├── enrichment/                 # 內容後處理
 │   └── post-processor.ts       # 連結展開、翻譯
