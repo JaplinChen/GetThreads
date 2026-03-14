@@ -54,6 +54,12 @@ const AI_SUBCATEGORY_REFINEMENT: Array<{ name: string; keywords: string[] }> = [
   },
 ];
 
+/** 短 ASCII 關鍵字（≤3 字元）用 word boundary，避免 'ai' 匹配 'Aitken' 等 substring 誤判 */
+function keywordMatch(h: string, kw: string): boolean {
+  const k = kw.toLowerCase();
+  return k.length <= 3 && /^[a-z0-9]+$/.test(k) ? new RegExp(`\\b${k}\\b`).test(h) : h.includes(k);
+}
+
 /** 當初次分類命中通用 AI 時，用 title+body 合併文本精煉到子分類 */
 function refineAISubcategory(title: string, body: string): string | null {
   const titleLower = title.toLowerCase();
@@ -61,7 +67,7 @@ function refineAISubcategory(title: string, body: string): string | null {
 
   for (const sub of AI_SUBCATEGORY_REFINEMENT) {
     // 標題命中 → 直接歸類（高信心）
-    if (sub.keywords.some((kw) => titleLower.includes(kw.toLowerCase()))) {
+    if (sub.keywords.some((kw) => keywordMatch(titleLower, kw))) {
       return sub.name;
     }
   }
@@ -69,7 +75,7 @@ function refineAISubcategory(title: string, body: string): string | null {
   // Body 命中需要至少 2 個不同關鍵詞才歸類（避免偶然提及）
   for (const sub of AI_SUBCATEGORY_REFINEMENT) {
     const matchCount = sub.keywords.filter(
-      (kw) => bodyLower.includes(kw.toLowerCase()),
+      (kw) => keywordMatch(bodyLower, kw),
     ).length;
     if (matchCount >= 2) {
       return sub.name;
@@ -79,16 +85,14 @@ function refineAISubcategory(title: string, body: string): string | null {
 }
 
 const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
-  // ── AI 子分類（必須排在通用 AI 之前，越精確的越前面）──────────────────────
+  // ── AI 子分類（越精確越前面，通用 AI 排最後）──
   {
-    // Claude Code / Cowork 相關教程與工具整合
     name: 'AI/Claude Code',
     keywords: [
       'claude code', 'cowork', 'claude cowork',
     ],
   },
   {
-    // OpenClaw 生態：安裝、設定、使用指南
     name: 'AI/OpenClaw',
     keywords: [
       'openclaw', 'open claw', 'openclaws', 'clawbot',
@@ -96,7 +100,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // 其他具體 AI 工具的使用、設定、安裝
     name: 'AI/工具',
     keywords: [
       'clawdbot',
@@ -106,8 +109,7 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
       'skill清单', 'skill 清單',
     ],
   },
-  {
-    // Obsidian 知識管理（排在通用生產力之前，攔截 Obsidian 專屬內容）
+  { // Obsidian 排在通用生產力之前
     name: '生產力/Obsidian',
     keywords: [
       'obsidian', 'pkm', 'zettelkasten',
@@ -115,10 +117,7 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
       '雙向連結', '雙向鏈結', '知識圖譜', '知識網路', '知識網絡',
     ],
   },
-  {
-    // 教學/入門內容：強調步驟、教程、新手
-    // 注意：移除裸字「入門/入门」以防過廣命中（如「Prompt Engineering 入門」誤分為學習）
-    // 保留複合詞「入門指南」「入門教學」「零基礎入門」避免誤傷真正的教學文
+  { // 教學/入門（裸字「入門」過廣，只保留複合詞）
     name: 'AI/學習',
     keywords: [
       '完全教程', '教程', '小白', '新手',
@@ -128,7 +127,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // Prompt / 調教 / 角色扮演
     name: 'AI/提示詞',
     keywords: [
       'prompt engineering', 'system prompt', '提示词', '提示詞',
@@ -137,7 +135,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // 模型本身：評測、比較、新模型發布
     name: 'AI/模型',
     keywords: [
       'minimax', 'deepseek', 'qwen', 'llama', 'mistral', 'gemma',
@@ -146,7 +143,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // AI Agent 工程、框架、多代理系統
     name: 'AI/Agent',
     keywords: [
       'ai agent', 'agentic engineer', 'agent工程', 'agent engineer',
@@ -155,7 +151,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // 應用場景、最佳實踐、RAG
     name: 'AI/應用',
     keywords: [
       'best practices', '最佳实践', '最佳實踐', '工程指南',
@@ -163,8 +158,7 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
       'langchain', 'langgraph', '数据抓取', '資料抓取',
     ],
   },
-  {
-    // 通用 AI（兜底，排在子分類後面）
+  { // 通用 AI（兜底）
     name: 'AI',
     keywords: [
       'ai', 'gpt', 'llm', 'claude', 'gemini', 'openai', 'anthropic',
@@ -173,7 +167,7 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
 
-  // ── 其他頂層分類 ───────────────────────────────────────────────────────────
+  // ── 其他頂層分類 ──
   {
     name: '科技',
     keywords: [
@@ -220,7 +214,6 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
     ],
   },
   {
-    // 平台專用關鍵詞優先級高於「筆記/工具」等通用詞
     name: '中文媒體',
     keywords: [
       '微博', 'weibo',
@@ -263,7 +256,7 @@ export function classifyContent(title: string, text: string): string {
 
   // Pass 1：標題優先（精準信號）
   for (const cat of CATEGORIES) {
-    if (cat.keywords.some((kw) => titleHaystack.includes(kw.toLowerCase()))) {
+    if (cat.keywords.some((kw) => keywordMatch(titleHaystack, kw))) {
       // 通用 AI 命中 → 嘗試精煉到子分類
       if (cat.name === 'AI') {
         const refined = refineAISubcategory(titleHaystack, bodyHaystack);
@@ -275,7 +268,7 @@ export function classifyContent(title: string, text: string): string {
 
   // Pass 2：本文 fallback（標題無命中時）
   for (const cat of CATEGORIES) {
-    if (cat.keywords.some((kw) => bodyHaystack.includes(kw.toLowerCase()))) {
+    if (cat.keywords.some((kw) => keywordMatch(bodyHaystack, kw))) {
       if (cat.name === 'AI') {
         const refined = refineAISubcategory(titleHaystack, bodyHaystack);
         if (refined) return refined;
@@ -293,7 +286,7 @@ export function extractKeywords(title: string, text: string): string[] {
   const matched: string[] = [];
   for (const cat of CATEGORIES) {
     for (const kw of cat.keywords) {
-      if (haystack.includes(kw.toLowerCase())) {
+      if (keywordMatch(haystack, kw)) {
         matched.push(kw);
         if (matched.length >= 5) return matched;
       }
