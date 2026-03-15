@@ -21,6 +21,7 @@ export const HELP_TEXT = [
   '/quality — Vault 品質報告',
   '/suggest — 相關筆記推薦（自動連結）',
   '/radar — 內容雷達（自動搜尋+存入）',
+  '/benchmark — 品質基準報告（評分趨勢/平台成功率）',
   '/status — Bot 狀態與本次儲存',
   '/help — 顯示此說明',
 ].join('\n');
@@ -42,6 +43,7 @@ export const BOT_COMMANDS_MENU = [
   { command: 'quality', description: 'Vault 品質報告' },
   { command: 'suggest', description: '相關筆記推薦' },
   { command: 'radar', description: '內容雷達' },
+  { command: 'benchmark', description: '品質基準報告' },
   { command: 'status', description: 'Bot 狀態' },
   { command: 'help', description: '顯示說明' },
 ];
