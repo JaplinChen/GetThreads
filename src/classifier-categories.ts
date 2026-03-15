@@ -3,6 +3,7 @@
 export interface CategoryRule {
   name: string;
   keywords: string[];
+  exclude?: string[];  // 命中任一排除詞則跳過此分類
 }
 
 export const CATEGORIES: CategoryRule[] = [
@@ -17,6 +18,11 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: [
       'claude cowork', 'cowork', 'openwork', '辦公協作', '協作辦公',
       'feishu', '飛書',
+    ],
+    exclude: [
+      'sword', 'antique', '古劍', '金屬', 'jewelry',
+      'staffing', 'employer', 'recruitment', '人力',
+      'john mayer', 'johnmayer', 'rakuten', 'reddit.com', 'r/',
     ],
   },
 
@@ -280,6 +286,10 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: [
       'food', 'travel', 'health', 'fitness', 'workout', 'recipe',
       'book', 'movie', '飲食', '旅遊', '健康', '運動', '閱讀', '電影', '生活', 'lifestyle',
+    ],
+    exclude: [
+      'github', 'cli', 'api', 'heartbeat', '健康檢查', 'health check',
+      'docker', '開源', 'open source', 'sdk', 'npm', 'bot',
     ],
   },
 ];
