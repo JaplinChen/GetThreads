@@ -15,7 +15,7 @@ export const CATEGORIES: CategoryRule[] = [
   {
     name: 'AI/研究對話/Claude',
     keywords: [
-      'claude code', 'claude', 'anthropic', 'claude cowork', 'openwork',
+      'claude code', 'claude', 'anthropic', 'claude cowork',
       'cowork', '辦公協作',
     ],
   },
@@ -37,7 +37,10 @@ export const CATEGORIES: CategoryRule[] = [
   },
   {
     name: 'AI/研究對話/OpenClaw',
-    keywords: ['openclaw', 'open claw', 'openclaws', 'clawbot', '龍蝦', '龙虾'],
+    keywords: [
+      'openclaw', 'open claw', 'openclaws', 'clawbot', '龍蝦', '龙虾',
+      'nanoclaw', 'opencloy', 'u-claw', 'clawhub', '養蝦', '小龍蝦',
+    ],
   },
   {
     name: 'AI/研究對話/Perplexity',
@@ -146,6 +149,7 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: [
       'image generat', '圖片生成', '圖像生成', '圖片放大', 'image enhance',
       'comfyui', '放大', 'text to image', '文生圖',
+      '3d model', '3d模型', '圖片轉3d', 'trellis',
     ],
   },
   {
@@ -153,6 +157,8 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: [
       'video generat', '影片生成', '影片製作', '視頻生成', '视频生成',
       'text to video', '文生影片', '文生視頻',
+      '字幕', 'caption', 'subtitle', '影片速度', '影片編輯', 'video edit',
+      'ffmpeg', '短影音', '剪輯',
     ],
   },
   { name: 'AI/文案撰寫', keywords: ['copywriting', '文案', 'ad copy', '廣告文案'] },
@@ -173,13 +179,16 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: [
       'ai agent', 'agentic', 'agent工程', 'agent engineer',
       'multi-agent', 'agent orchestration', 'agent 軍團', 'agent 架構',
-      'agent framework', 'agent monitoring',
+      'agent framework', 'agent monitoring', 'agent 操控', 'agent 監控',
       '自動化', 'automation', 'workflow', 'mcp server', 'mcp tool', 'mcp ',
       'telegram bot', 'bot',
       'rag', 'retrieval', 'vector database', 'embedding',
       'langchain', 'langgraph',
       'best practices', '最佳实践', '最佳實踐', '工程指南',
       '数据抓取', '資料抓取',
+      '爬蟲', 'crawler', 'scraping', 'scraper', 'firecrawl',
+      'cli tool', 'cli 工具', '情報', '無頭瀏覽器', 'headless browser',
+      '團隊組建', 'skill清单', 'skill 清單',
     ],
   },
   { name: 'AI/簡報', keywords: ['簡報', 'ppt', 'presentation', 'slide deck', '投影片'] },
@@ -230,7 +239,7 @@ export const CATEGORIES: CategoryRule[] = [
     keywords: ['mac', 'macbook', 'iphone', 'ipad', 'macos', 'apple silicon', 'apple watch', 'ios ', 'mac mini', 'mac studio', 'mac pro', 'imac', 'macwhisper', 'orbstack'],
   },
   { name: '科技', keywords: ['hardware', 'chip', 'semiconductor', '晶片', '半導體', '硬體', '科技新聞', '休眠機制'] },
-  { name: '程式設計', keywords: ['programming', 'javascript', 'typescript', 'python', 'rust', 'react', 'nextjs', '程式設計', 'backend', 'frontend', 'database', '訂閱管理'] },
+  { name: '程式設計', keywords: ['programming', 'javascript', 'typescript', 'python', 'rust', 'react', 'nextjs', '程式設計', 'backend', 'frontend', 'database', '訂閱管理', '健康檢查', 'heartbeat', 'health check', 'c#', '.net', 'golang', 'swift', 'kotlin', 'docker'] },
   {
     name: '投資理財',
     keywords: [
