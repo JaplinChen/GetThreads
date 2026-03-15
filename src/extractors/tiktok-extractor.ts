@@ -1,8 +1,4 @@
-/**
- * TikTok extractor — handles both video and photo slideshow posts.
- * Video: yt-dlp for download/metadata/subtitles, ffmpeg keyframes, whisper STT.
- * Slideshow: yt-dlp metadata (via /video/ URL hack) + Camoufox for slide images.
- */
+/** TikTok extractor — video (yt-dlp + ffmpeg + whisper) & photo slideshow (Camoufox). */
 import { execFile } from 'node:child_process';
 import { logger } from '../core/logger.js';
 import { promisify } from 'node:util';
@@ -35,6 +31,16 @@ interface TikTokMeta {
   subtitles?: Record<string, Array<{ ext: string; url: string }>>;
   webpage_url: string;
   formats?: Array<{ format_id?: string; ext?: string; vcodec?: string }>;
+}
+
+/** Resolve short TikTok URLs (vt/vm.tiktok.com) to full URLs via redirect */
+async function resolveShortUrl(url: string): Promise<string> {
+  if (TIKTOK_POST.test(url)) return url;
+  try {
+    const resolved = (await fetch(url, { method: 'HEAD', redirect: 'follow' })).url;
+    if (/tiktok\.com/.test(resolved)) return resolved;
+  } catch { /* fallback to original */ }
+  return url;
 }
 
 function formatDate(uploadDate?: string): string {
@@ -212,8 +218,9 @@ export const tiktokExtractor: Extractor = {
   },
 
   async extract(url: string): Promise<ExtractedContent> {
-    // yt-dlp doesn't support /photo/ URLs — use /video/ URL for metadata
-    const metaUrl = url.replace(/\/photo\//, '/video/');
+    // Resolve short URLs first, then swap /photo/ → /video/ for yt-dlp
+    const resolvedUrl = await resolveShortUrl(url);
+    const metaUrl = resolvedUrl.replace(/\/photo\//, '/video/');
 
     let meta: TikTokMeta;
     try {
@@ -228,7 +235,7 @@ export const tiktokExtractor: Extractor = {
     }
 
     const author = meta.creator ?? meta.uploader ?? 'Unknown';
-    const pageUrl = meta.webpage_url ?? url;
+    const pageUrl = meta.webpage_url ?? resolvedUrl;
 
     // ── Slideshow: Camoufox for images, no video download ──
     if (isSlideshow(meta)) {
