@@ -14,7 +14,7 @@ interface PoolEntry {
 class CamoufoxPool {
   private entries: PoolEntry[] = [];
   private idleTimer?: NodeJS.Timeout;
-  private readonly MAX_SIZE = 2;
+  private readonly MAX_SIZE = 4;
   private readonly IDLE_MS = 10 * 60 * 1000; // 10 minutes
 
   /** Acquire a page from the pool. Call release() when done. */
@@ -73,7 +73,7 @@ class CamoufoxPool {
     while (Date.now() - start < timeoutMs) {
       const idle = this.entries.find(e => !e.inUse);
       if (idle) return idle;
-      await new Promise(r => setTimeout(r, 250));
+      await new Promise(r => setTimeout(r, 100));
     }
     throw new Error('CamoufoxPool timeout: all browsers are busy (>30s)');
   }

@@ -1,7 +1,7 @@
 ﻿/**
  * Post-processing pipeline: runs after extract + AI enrich, before save.
  * Enriches linked URLs and translates non-zh-TW content in parallel.
- * Entire pipeline has a 20s hard timeout; any failure is silently skipped.
+ * Each step has its own timeout (links: 18s, translation: 15s) to avoid mutual interference.
  */
 
 import type { ExtractedContent } from '../extractors/types.js';
@@ -60,23 +60,27 @@ export async function postProcess(
 
   if (urlEntries.length === 0 && !shouldTranslate) return;
 
-  const timer = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 20_000));
+  const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T | null> =>
+    Promise.race([
+      p,
+      new Promise<null>((resolve) => {
+        setTimeout(() => {
+          logger.warn('post-process', `${label} 超時 (${ms}ms)，略過`);
+          resolve(null);
+        }, ms);
+      }),
+    ]);
 
-  const work = Promise.allSettled([
-    urlEntries.length > 0 ? enrichLinkedUrls(urlEntries) : Promise.resolve([]),
-    shouldTranslate ? translateIfNeeded(content.title, content.text) : Promise.resolve(null),
+  const [linkedResult, translationResult] = await Promise.allSettled([
+    urlEntries.length > 0
+      ? withTimeout(enrichLinkedUrls(urlEntries), 18_000, '連結補充')
+      : Promise.resolve(null),
+    shouldTranslate
+      ? withTimeout(translateIfNeeded(content.title, content.text), 15_000, '翻譯')
+      : Promise.resolve(null),
   ]);
 
-  const result = await Promise.race([work, timer]);
-
-  if (result === 'timeout') {
-    logger.warn('post-process', '整體超時 (20s)，略過補充處理');
-    return;
-  }
-
-  const [linkedResult, translationResult] = result;
-
-  if (linkedResult.status === 'fulfilled' && linkedResult.value.length > 0) {
+  if (linkedResult.status === 'fulfilled' && linkedResult.value && Array.isArray(linkedResult.value) && linkedResult.value.length > 0) {
     content.linkedContent = linkedResult.value;
     logger.info('post-process', '補充連結完成', { count: linkedResult.value.length });
   }

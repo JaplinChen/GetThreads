@@ -22,30 +22,29 @@ export async function enrichExtractedContent(content: ExtractedContent, config: 
     .replace(/\s+/g, ' ')
     .trim();
 
-  // OCR: extract text from screenshot-like images when text is minimal
+  // OCR + Vision: run in parallel when images present and text is minimal
   let ocrText = '';
-  if (content.images.length > 0 && cleanText.length < 200 && isLikelyScreenshot(content.url, cleanText)) {
-    try {
-      ocrText = await ocrContentImages(content.images, cleanText, 2);
-      if (ocrText) {
-        logger.info('msg', 'ocr-extracted', { chars: ocrText.length });
-      }
-    } catch (err) {
-      logger.warn('msg', 'ocr failed', { message: (err as Error).message });
-    }
-  }
-
-  // Vision analysis: analyze images when text is insufficient
   let imageContext = '';
   if (content.images.length > 0 && cleanText.length < 200) {
-    try {
-      imageContext = await analyzeContentImages(content.images, 2);
-      if (imageContext) {
-        content.imageDescriptions = imageContext;
-        logger.info('msg', 'vision-analysis', { chars: imageContext.length });
-      }
-    } catch (err) {
-      logger.warn('msg', 'vision-analysis failed', { message: (err as Error).message });
+    const needOcr = isLikelyScreenshot(content.url, cleanText);
+    const [ocrResult, visionResult] = await Promise.all([
+      needOcr
+        ? ocrContentImages(content.images, cleanText, 2).catch((err: Error) => {
+            logger.warn('msg', 'ocr failed', { message: err.message });
+            return '';
+          })
+        : Promise.resolve(''),
+      analyzeContentImages(content.images, 2).catch((err: Error) => {
+        logger.warn('msg', 'vision-analysis failed', { message: err.message });
+        return '';
+      }),
+    ]);
+    ocrText = ocrResult;
+    if (ocrText) logger.info('msg', 'ocr-extracted', { chars: ocrText.length });
+    imageContext = visionResult;
+    if (imageContext) {
+      content.imageDescriptions = imageContext;
+      logger.info('msg', 'vision-analysis', { chars: imageContext.length });
     }
   }
 

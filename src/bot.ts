@@ -17,7 +17,7 @@ function isAuthorized(config: AppConfig, userId: number | undefined): boolean {
 
 export function createBot(config: AppConfig): Telegraf {
   const bot = new Telegraf(config.botToken, {
-    handlerTimeout: 90_000,
+    handlerTimeout: 180_000,
   });
 
   // Auth middleware: all handlers below require authorization.
