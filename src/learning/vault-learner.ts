@@ -2,6 +2,7 @@
 import { dirname, join } from 'node:path';
 import { logger } from '../core/logger.js';
 import { parseFrontmatter, parseArrayField, getAllMdFiles } from '../vault/frontmatter-utils.js';
+import { getFeedbackWeight, loadFeedbackStore } from './feedback-tracker.js';
 
 export interface NoteStats {
   category: string;
@@ -136,7 +137,10 @@ export function computeClassificationRules(notes: NoteStats[]): ClassificationRu
       }
     }
 
-    const score = Math.round((bestCount / total) * 100) / 100;
+    let score = Math.round((bestCount / total) * 100) / 100;
+    // Apply feedback weight adjustment (±0.1 max per keyword)
+    const feedbackBonus = Math.max(-0.1, Math.min(0.1, getFeedbackWeight(keyword, bestCat) * 0.02));
+    score = Math.min(1, Math.max(0, score + feedbackBonus));
     if (score < 0.7) continue;
     rules.push({ keyword, category: bestCat, score, count: total });
   }
@@ -168,6 +172,8 @@ export function computeFormattingPatterns(notes: NoteStats[]): FormattingPattern
 }
 
 export async function runVaultLearner(vaultPath: string, outputPath: string): Promise<LearnedPatterns> {
+  // Ensure feedback weights are loaded before computing rules
+  await loadFeedbackStore().catch(() => {});
   const notes = await scanVaultNotes(vaultPath);
   const categoryDist: Record<string, number> = {};
   for (const n of notes) {

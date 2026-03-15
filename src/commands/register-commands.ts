@@ -18,6 +18,7 @@ import { handleQuality } from './quality-command.js';
 import { handleDigestMenu, handleDigest } from './digest-command.js';
 import { handleSuggest } from './suggest-command.js';
 import { handleRadar, handleRadarAction } from './radar-command.js';
+import { handleBenchmark } from './benchmark-command.js';
 import {
   handleExplore,
   handleRecommendByTopic,
@@ -91,6 +92,7 @@ export function registerCommands(
   registerAsyncCommand(bot, 'quality', 'quality', config, handleQuality);
   registerAsyncCommand(bot, 'suggest', 'suggest', config, handleSuggest);
   registerAsyncCommand(bot, 'radar', 'radar', config, handleRadar);
+  registerAsyncCommand(bot, 'benchmark', 'benchmark', config, handleBenchmark);
 
   // --- InlineKeyboard: /knowledge sub-actions ---
   registerAsyncAction(bot, /^kb:(.+)$/, 'knowledge-action', async (ctx) => {

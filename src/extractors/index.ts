@@ -1,4 +1,6 @@
-import { registerExtractor } from '../utils/url-parser.js';
+import { registerExtractor, getRegisteredExtractors } from '../utils/url-parser.js';
+
+export { getRegisteredExtractors };
 import { xExtractor } from './x-extractor.js';
 import { threadsExtractor } from './threads-extractor.js';
 import { youtubeExtractor } from './youtube-extractor.js';

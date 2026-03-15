@@ -4,6 +4,7 @@ import { classifyContent } from '../classifier.js';
 import type { AppConfig } from '../utils/config.js';
 import { readdir, readFile, writeFile, rename, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
+import { recordFeedback } from './feedback-tracker.js';
 
 export interface ReclassifyResult {
   total: number;
@@ -107,6 +108,19 @@ export async function executeReclassify(config: AppConfig): Promise<ReclassifyRe
       from: storedCategory,
       to: newCategory,
     });
+
+    // Record feedback for learning loop reinforcement
+    const kwField = extractFrontmatterField(raw, 'keywords');
+    const keywords = kwField
+      ? kwField.replace(/[\[\]"]/g, '').split(',').map(k => k.trim()).filter(Boolean)
+      : [];
+    recordFeedback({
+      from: storedCategory,
+      to: newCategory,
+      title,
+      keywords,
+      timestamp: new Date().toISOString(),
+    }).catch(() => {});
   }
 
   return { total: allFiles.length, moved, changes };

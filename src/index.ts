@@ -13,6 +13,8 @@ import { loadSubscriptions } from './subscriptions/subscription-store.js';
 import { startSubscriptionChecker } from './subscriptions/subscription-checker.js';
 import { loadRadarConfig } from './radar/radar-store.js';
 import { startRadarChecker } from './radar/radar-service.js';
+import { startProactiveService } from './proactive/proactive-service.js';
+import { startMonitorService } from './monitoring/monitor-service.js';
 
 const config = loadConfig();
 registerAllExtractors();
@@ -68,6 +70,14 @@ loadRadarConfig()
     }
   })
   .catch((e) => logger.warn('radar', '載入雷達失敗', { message: (e as Error).message }));
+
+// Start proactive intelligence service
+startProactiveService(bot, config)
+  .catch((e) => logger.warn('proactive', '啟動主動推理失敗', { message: (e as Error).message }));
+
+// Start self-healing monitoring service
+startMonitorService(bot, config)
+  .catch((e) => logger.warn('monitor', '啟動監控服務失敗', { message: (e as Error).message }));
 
 const forceMode = process.argv.includes('--force');
 new ProcessGuardian(bot, forceMode).launch();
