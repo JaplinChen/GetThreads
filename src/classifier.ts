@@ -190,7 +190,7 @@ const CATEGORIES: Array<{ name: string; keywords: string[] }> = [
   // ── 其他頂層分類 ──
   { // Apple 產品排在通用科技之前
     name: '科技/Apple',
-    keywords: ['macbook', 'iphone', 'ipad', 'macos', 'apple silicon', 'apple watch', 'ios ', 'mac mini', 'mac studio', 'mac pro', 'imac', 'macwhisper', 'orbstack'],
+    keywords: ['mac', 'macbook', 'iphone', 'ipad', 'macos', 'apple silicon', 'apple watch', 'ios ', 'mac mini', 'mac studio', 'mac pro', 'imac', 'macwhisper', 'orbstack'],
   },
   {
     name: '科技',
